@@ -1,0 +1,154 @@
+/* FailurePage.css */
+:root {
+  --fp-bg: #0c0000;
+  --fp-primary: #ff2244;
+  --fp-secondary: #ff6600;
+  --fp-text: #f0c0c8;
+  --fp-muted: rgba(240,192,200,0.5);
+  --fp-border: rgba(255,34,68,0.3);
+  --fp-font: "Courier New", Courier, monospace;
+}
+
+@keyframes fp-flicker {
+  0%, 100% { opacity: 1; }
+  3% { opacity: 0.4; }
+  6% { opacity: 1; }
+  40% { opacity: 1; }
+  41% { opacity: 0.2; }
+  43% { opacity: 1; }
+}
+
+@keyframes fp-fade-in {
+  from { opacity: 0; transform: scale(1.1); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fp-red-pulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(255,34,68,0.6); }
+  50% { text-shadow: 0 0 60px rgba(255,34,68,1), 0 0 100px rgba(255,102,0,0.4); }
+}
+
+@keyframes fp-scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+@keyframes fp-glitch {
+  0% { transform: translateX(0); }
+  10% { transform: translateX(-3px) skewX(1deg); }
+  20% { transform: translateX(3px) skewX(-1deg); }
+  30% { transform: translateX(0); }
+  100% { transform: translateX(0); }
+}
+
+.fp-page {
+  min-height: 100vh;
+  background: var(--fp-bg);
+  font-family: var(--fp-font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+  animation: fp-fade-in 0.5s ease;
+}
+
+.fp-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(255,34,68,0.06) 0%, transparent 60%),
+    repeating-linear-gradient(rgba(255,34,68,0.03) 0, rgba(255,34,68,0.03) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,34,68,0.03) 0, rgba(255,34,68,0.03) 1px, transparent 1px, transparent 40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.fp-scan {
+  position: fixed;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(transparent, rgba(255,34,68,0.3), transparent);
+  animation: fp-scan 3s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.fp-content {
+  position: relative;
+  z-index: 5;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.fp-icon {
+  font-size: 80px;
+  animation: fp-flicker 3s infinite;
+}
+
+.fp-title {
+  font-size: clamp(28px, 7vw, 64px);
+  font-weight: bold;
+  letter-spacing: 8px;
+  color: var(--fp-primary);
+  text-transform: uppercase;
+  animation: fp-red-pulse 2s ease infinite, fp-glitch 5s ease infinite;
+}
+
+.fp-subtitle {
+  font-size: clamp(10px, 2vw, 14px);
+  letter-spacing: 4px;
+  color: var(--fp-muted);
+}
+
+.fp-message {
+  max-width: 500px;
+  border: 1px solid var(--fp-border);
+  background: rgba(255,34,68,0.05);
+  padding: 24px 32px;
+  font-size: 13px;
+  color: var(--fp-text);
+  line-height: 1.8;
+  letter-spacing: 1px;
+  border-left: 3px solid var(--fp-primary);
+}
+
+.fp-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.fp-btn {
+  padding: 14px 32px;
+  background: transparent;
+  font-family: var(--fp-font);
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fp-btn-primary {
+  border: 2px solid var(--fp-primary);
+  color: var(--fp-primary);
+}
+.fp-btn-primary:hover { background: var(--fp-primary); color: #000; }
+
+.fp-btn-secondary {
+  border: 1px solid rgba(255,34,68,0.3);
+  color: var(--fp-muted);
+}
+.fp-btn-secondary:hover { border-color: var(--fp-primary); color: var(--fp-primary); }
+
+@media (max-width: 425px) {
+  .fp-title { letter-spacing: 4px; }
+  .fp-message { padding: 18px 20px; }
+}
