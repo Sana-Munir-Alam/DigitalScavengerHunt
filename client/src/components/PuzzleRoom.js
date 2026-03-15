@@ -79,7 +79,7 @@ function ClueModal({ clue, puzzleName, onClose }) {
           }}
         >
           <div style={{ fontSize: "10px", letterSpacing: "3px", color: "var(--pr-secondary)", marginBottom: "10px" }}>
-            🔐 TRAIL MARK — SAVE THIS
+            🔐 TRAIL CLUE — SAVE THIS
           </div>
           {clue}
         </div>
@@ -230,16 +230,23 @@ export default function PuzzleRoom() {
           ? axios.get(`/api/puzzles/${trailType}`)
           : Promise.resolve(null),
       ]);
-      setUserData(userRes.data);
-      setTimeRemaining(userRes.data.timeRemaining);
+      const data = userRes.data;
+      setUserData(data);
+
+      // Only update timer from server when game is active; reset when not
+      if (data.gameActive) {
+        setTimeRemaining(data.timeRemaining);
+      } else {
+        setTimeRemaining(7200);
+      }
 
       if (puzzleRes) {
         setPuzzleData(puzzleRes.data);
       }
 
       // Handle game ended by admin — redirect to success or failure
-      if (userRes.data.gameEnded) {
-        if (userRes.data.SafeStatus) {
+      if (data.gameEnded) {
+        if (data.SafeStatus) {
           navigate("/success");
         } else {
           navigate("/failure");
@@ -258,8 +265,11 @@ export default function PuzzleRoom() {
     return () => clearInterval(poll);
   }, [teamName, navigate, fetchData]);
 
-  // Live countdown
+  // Live countdown — only runs when game is active.
+  // Clears automatically when gameActive flips false (deactivate/reset/end).
+  const gameActive = userData?.gameActive ?? true;
   useEffect(() => {
+    if (!gameActive) return;
     const timer = setInterval(() => {
       setTimeRemaining((t) => {
         if (t <= 1) {
@@ -271,7 +281,7 @@ export default function PuzzleRoom() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [navigate]);
+  }, [gameActive, navigate]);
 
   const showToast = (message, type) => {
     setToast({ message, type });

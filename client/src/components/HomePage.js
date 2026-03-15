@@ -29,9 +29,15 @@ export default function HomePage() {
       setGameStartEnabled(data.GameStartStatus);
       setGameActive(data.gameActive);
 
-      if (data.GameStartTime) {
+      if (data.GameStartTime && data.gameActive) {
+        // Game is actively running — sync server time
         setGameStarted(true);
         setTimeRemaining(data.timeRemaining);
+      } else {
+        // Admin deactivated / reset-game / end-game / reset-timer:
+        // reset local state so timer shows 02:00:00 and stops ticking
+        setGameStarted(false);
+        setTimeRemaining(7200);
       }
 
       // If admin ended game — redirect all non-Home users
@@ -48,9 +54,11 @@ export default function HomePage() {
     return () => clearInterval(poll);
   }, [teamName, navigate, fetchUserData]);
 
-  // Countdown
+  // Countdown — only ticks when both gameStarted AND gameActive are true.
+  // When admin deactivates/resets, gameActive flips false → cleanup fires,
+  // killing the interval. fetchUserData also resets gameStarted to false.
   useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted || !gameActive) return;
     const timer = setInterval(() => {
       setTimeRemaining((t) => {
         if (t <= 1) {
@@ -62,7 +70,7 @@ export default function HomePage() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [gameStarted, navigate]);
+  }, [gameStarted, gameActive, navigate]);
 
   const handleStartGame = async () => {
     setLoading(true);
