@@ -1,74 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/PuzzleRoom.css";
-
-// Puzzle descriptions per trail
-const PUZZLE_DESCRIPTIONS = {
-  Red: {
-    tech: [
-      "A substitution method used in classical cryptography where each letter is replaced by another. Used in ancient Rome. What is this technique called? Answer: CIPHER",
-      "The interconnected system of devices sharing data. Every device on the internet is part of this. A fundamental concept in IT. Answer: NETWORK",
-      "A set of rules governing communication between devices. TCP/IP is an example. Without this, systems cannot communicate. Answer: PROTOCOL",
-      "A security system that monitors and filters network traffic. Acts as the first line of digital defense. Answer: FIREWALL",
-      "The process of converting readable data into an unreadable format. Requires a key to reverse. Essential for secure communication. Answer: ENCRYPT",
-      "The data carried by a network packet — the actual message or malicious code embedded within. Answer: PAYLOAD",
-      "Malicious software that gains privileged access to a computer system while hiding its presence. Answer: ROOTKIT",
-      "An isolated environment for testing untrusted programs safely without affecting the host system. Answer: SANDBOX",
-    ],
-    physical: [
-      "Find the board that displays the maze of the event venue. The shape it forms is the answer. Answer: LABYRINTH",
-      "A navigational tool always pointing north. Find the physical one hidden in your zone. Answer: COMPASS",
-      "An imaginary line running through the poles. The longitude of zero degrees. Answer: MERIDIAN",
-      "Where the sky meets the earth visually. Find the marked zone that represents this boundary. Answer: HORIZON",
-      "When the moon blocks the sun. A clue hidden in the astronomy exhibit. Answer: ECLIPSE",
-    ],
-  },
-  Green: {
-    tech: [
-      "The base-2 numeral system using only 0s and 1s. The language of all computers. Answer: BINARY",
-      "The core of the operating system. It manages communication between hardware and software. Answer: KERNEL",
-      "A background process in Unix/Linux systems that starts automatically and runs continuously. Answer: DAEMON",
-      "An endpoint for sending and receiving data across a network. Used in TCP/UDP communication. Answer: SOCKET",
-      "A region of memory used to temporarily store data during transfers. An overflow here can crash systems. Answer: BUFFER",
-      "A C function that dynamically allocates memory during runtime. Failure to free it causes leaks. Answer: MALLOC",
-      "The smallest unit of execution within a process. Programs can run many of these simultaneously. Answer: THREAD",
-      "A data structure that stores direction and magnitude. Also used in C++ STL for dynamic arrays. Answer: VECTOR",
-    ],
-    physical: [
-      "A measurement of height above sea level. Find the sign showing this metric in the stairwell. Answer: ALTITUDE",
-      "To move across a terrain — a hiking or mapping term. Find the physical route marked in your zone. Answer: TRAVERSE",
-      "The highest point of a mountain or achievement. Look for the marked summit illustration. Answer: PINNACLE",
-      "Moving downward from a height. Find the descending arrow path in the physical zone. Answer: DESCENT",
-      "A watchful guardian or guard post. Find the standing figure or marked post in your zone. Answer: SENTINEL",
-    ],
-  },
-  Blue: {
-    tech: [
-      "A unit of data transmitted over a network. Contains headers and a payload. Routers forward these. Answer: PACKET",
-      "A networking device that forwards data packets between computer networks using routing tables. Answer: ROUTER",
-      "A division of a network — IP addresses are grouped into these for better management. Answer: SUBNET",
-      "The node in a network that routes traffic to other networks. Your home has one of these. Answer: GATEWAY",
-      "A small piece of data stored by a browser that tracks session state. Can be stolen in XSS attacks. Answer: COOKIE",
-      "Code embedded in a webpage that runs in the browser. Can be used for both functionality and attacks. Answer: SCRIPT",
-      "A compromised computer in a botnet that obeys commands without the owner's knowledge. Answer: ZOMBIE",
-      "Malware disguised as legitimate software that creates backdoors. Named after a Greek myth. Answer: TROJAN",
-    ],
-    physical: [
-      "A violent rotating column of air. Find the spiral diagram in your physical zone. Answer: VORTEX",
-      "Something that appears without a clear source — ghostly. Find the hidden marker in your zone. Answer: PHANTOM",
-      "A central hub where systems or networks connect. Find the physical connection point in your zone. Answer: NEXUS",
-      "The range of colors of light. Find the prism or color strip displayed in your zone. Answer: SPECTRUM",
-      "An agent that triggers a reaction without being consumed. Find the chemical symbol display. Answer: CATALYST",
-    ],
-  },
-};
 
 const TECH_CODES = [
   "T1-001","T1-002","T1-003","T1-004",
   "T1-005","T1-006","T1-007","T1-008",
 ];
-
 const PHY_CODES = ["S1-001","S1-002","S1-003","S1-004","S1-005"];
 
 function formatTime(seconds) {
@@ -121,7 +59,43 @@ function PuzzleCard({ index, code, status, timeVal, onClick }) {
   );
 }
 
-// PUZZLE MODAL
+// CLUE POPUP — shown after correct answer or when clicking a solved puzzle
+function ClueModal({ clue, puzzleName, onClose }) {
+  return (
+    <div className="pr-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pr-modal" style={{ borderColor: "var(--pr-secondary)" }}>
+        <button className="pr-modal-close" onClick={onClose}>✕</button>
+        <div className="pr-modal-title" style={{ color: "var(--pr-secondary)" }}>
+          ✓ PUZZLE SOLVED
+        </div>
+        <div className="pr-modal-code">{puzzleName}</div>
+        <div
+          className="pr-modal-desc"
+          style={{
+            borderLeftColor: "var(--pr-secondary)",
+            background: "rgba(0,255,136,0.05)",
+            fontSize: "15px",
+            letterSpacing: "1px",
+          }}
+        >
+          <div style={{ fontSize: "10px", letterSpacing: "3px", color: "var(--pr-secondary)", marginBottom: "10px" }}>
+            🔐 TRAIL MARK — SAVE THIS
+          </div>
+          {clue}
+        </div>
+        <button
+          className="pr-modal-submit"
+          style={{ borderColor: "var(--pr-secondary)", color: "var(--pr-secondary)" }}
+          onClick={onClose}
+        >
+          <span>ACKNOWLEDGED</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// PUZZLE MODAL — description + answer input
 function PuzzleModal({ puzzle, onClose, onSubmit, result }) {
   const [answer, setAnswer] = useState("");
   const inputRef = useRef(null);
@@ -140,7 +114,9 @@ function PuzzleModal({ puzzle, onClose, onSubmit, result }) {
       <div className="pr-modal">
         <button className="pr-modal-close" onClick={onClose}>✕</button>
         <div className="pr-modal-title">PUZZLE {puzzle.code}</div>
-        <div className="pr-modal-code">Classification: ACTIVE CHALLENGE</div>
+        <div className="pr-modal-code">
+          {puzzle.puzzleName || "Classification: ACTIVE CHALLENGE"}
+        </div>
         <div className="pr-modal-desc">{puzzle.description}</div>
 
         {puzzle.status !== 2 && (
@@ -200,7 +176,7 @@ function BossFlagModal({ onClose, onSuccess }) {
         <div className="pr-modal-title" style={{ color: "var(--pr-accent)" }}>BOSS LEVEL ACCESS</div>
         <div className="pr-modal-code">Enter combined trail flag to proceed</div>
         <div className="pr-modal-desc" style={{ borderLeftColor: "var(--pr-accent)" }}>
-          You must input the combined flag string collected throughout your trail. 
+          You must input the combined flag string collected throughout your trail.
           The tech flag and physical flag concatenated together form the key.
         </div>
         <div className="pr-modal-input-group">
@@ -236,27 +212,49 @@ export default function PuzzleRoom() {
   const trailType = sessionStorage.getItem("trailType");
 
   const [userData, setUserData] = useState(null);
+  const [puzzleData, setPuzzleData] = useState({ tech: [], physical: [] });
   const [timeRemaining, setTimeRemaining] = useState(7200);
   const [activePuzzle, setActivePuzzle] = useState(null);
-  const [activeType, setActiveType] = useState(null); // "tech" | "physical"
+  const [activeType, setActiveType] = useState(null);
   const [modalResult, setModalResult] = useState(null);
   const [toast, setToast] = useState(null);
   const [showBossModal, setShowBossModal] = useState(false);
+  // Clue popup state
+  const [cluePopup, setCluePopup] = useState(null); // { clue, puzzleName }
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await axios.get(`/api/user/${teamName}`);
-      setUserData(res.data);
-      setTimeRemaining(res.data.timeRemaining);
+      const [userRes, puzzleRes] = await Promise.all([
+        axios.get(`/api/user/${teamName}`),
+        puzzleData.tech.length === 0
+          ? axios.get(`/api/puzzles/${trailType}`)
+          : Promise.resolve(null),
+      ]);
+      setUserData(userRes.data);
+      setTimeRemaining(userRes.data.timeRemaining);
+
+      if (puzzleRes) {
+        setPuzzleData(puzzleRes.data);
+      }
+
+      // Handle game ended by admin — redirect to success or failure
+      if (userRes.data.gameEnded) {
+        if (userRes.data.SafeStatus) {
+          navigate("/success");
+        } else {
+          navigate("/failure");
+        }
+      }
     } catch (err) {
       console.error(err);
     }
-  }, [teamName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamName, trailType]);
 
   useEffect(() => {
     if (!teamName) { navigate("/login"); return; }
     fetchData();
-    const poll = setInterval(fetchData, 8000);
+    const poll = setInterval(fetchData, 6000);
     return () => clearInterval(poll);
   }, [teamName, navigate, fetchData]);
 
@@ -289,20 +287,29 @@ export default function PuzzleRoom() {
     const status = statusArr[index];
     if (status === 0) return; // locked
 
+    const puzzles = type === "tech" ? puzzleData.tech : puzzleData.physical;
+    const puzzle = puzzles[index];
+    const code = type === "tech" ? TECH_CODES[index] : PHY_CODES[index];
+
+    // If already solved — show the clue popup instead of answer form
+    if (status === 2) {
+      setCluePopup({ clue: puzzle?.Clue || "—", puzzleName: puzzle?.PuzzleName || code });
+      return;
+    }
+
     // If wrong status, retry first
     if (status === 3) {
       handleRetry(index, type);
       return;
     }
 
-    const descriptions = PUZZLE_DESCRIPTIONS[trailType];
-    const desc = type === "tech"
-      ? descriptions?.tech?.[index]
-      : descriptions?.physical?.[index];
-
-    const code = type === "tech" ? TECH_CODES[index] : PHY_CODES[index];
-
-    setActivePuzzle({ index, code, description: desc, status });
+    setActivePuzzle({
+      index,
+      code,
+      description: puzzle?.Description || "Loading...",
+      puzzleName: puzzle?.PuzzleName || code,
+      status,
+    });
     setActiveType(type);
     setModalResult(null);
   };
@@ -314,13 +321,16 @@ export default function PuzzleRoom() {
         : "/api/puzzle/physical/retry";
       await axios.post(endpoint, { teamName, puzzleIndex: index });
       await fetchData();
-      // Re-open modal after retry
-      const descriptions = PUZZLE_DESCRIPTIONS[trailType];
-      const desc = type === "tech"
-        ? descriptions?.tech?.[index]
-        : descriptions?.physical?.[index];
+      const puzzles = type === "tech" ? puzzleData.tech : puzzleData.physical;
+      const puzzle = puzzles[index];
       const code = type === "tech" ? TECH_CODES[index] : PHY_CODES[index];
-      setActivePuzzle({ index, code, description: desc, status: 1 });
+      setActivePuzzle({
+        index,
+        code,
+        description: puzzle?.Description || "Loading...",
+        puzzleName: puzzle?.PuzzleName || code,
+        status: 1,
+      });
       setActiveType(type);
       setModalResult(null);
     } catch (err) {
@@ -343,10 +353,17 @@ export default function PuzzleRoom() {
       });
 
       if (res.data.result === "correct" || res.data.result === "already_solved") {
-        setModalResult({ type: "correct", message: "✓ CORRECT — Puzzle solved! +10 points" });
-        showToast("✓ CORRECT! +10 pts", "correct-toast");
         await fetchData();
-        setTimeout(() => setActivePuzzle(null), 1500);
+        setActivePuzzle(null);
+        setModalResult(null);
+        // Show the clue popup
+        const puzzles = activeType === "tech" ? puzzleData.tech : puzzleData.physical;
+        const puzzle = puzzles[activePuzzle.index];
+        setCluePopup({
+          clue: res.data.clue || puzzle?.Clue || "—",
+          puzzleName: puzzle?.PuzzleName || activePuzzle.code,
+        });
+        showToast("✓ CORRECT! +10 pts", "correct-toast");
       } else {
         setModalResult({ type: "wrong", message: "✗ INCORRECT — Penalty -0.1 applied. Click card to retry." });
         showToast("✗ WRONG ANSWER — Penalty applied", "wrong-toast");
@@ -369,6 +386,13 @@ export default function PuzzleRoom() {
   const techTimes = userData?.TechPuzzleTime || Array(8).fill(0);
   const physTimes = userData?.PhysicalPuzzleTime || Array(5).fill(0);
   const scavengerUnlocked = physStatuses.some((s) => s >= 1);
+
+  // Boss button counter: all 13 puzzles must be solved (8 tech + 5 physical)
+  const techSolved = techStatuses.filter((s) => s === 2).length;
+  const physSolved = physStatuses.filter((s) => s === 2).length;
+  const totalSolved = techSolved + physSolved;
+  const TOTAL_PUZZLES = 13;
+  const allPuzzlesSolved = totalSolved === TOTAL_PUZZLES;
 
   return (
     <div className="pr-page">
@@ -449,19 +473,38 @@ export default function PuzzleRoom() {
 
         {/* BOSS LEVEL */}
         <div className="pr-boss-section">
-          <button className="pr-boss-btn" onClick={() => setShowBossModal(true)}>
-            <span>⚠ BOSS LEVEL</span>
+          <button
+            className={`pr-boss-btn ${!allPuzzlesSolved ? "disabled" : ""}`}
+            onClick={() => allPuzzlesSolved && setShowBossModal(true)}
+            disabled={!allPuzzlesSolved}
+            title={allPuzzlesSolved ? "Enter Boss Level" : `Solve all puzzles first (${totalSolved}/${TOTAL_PUZZLES})`}
+            style={!allPuzzlesSolved ? { opacity: 0.4, cursor: "not-allowed", borderColor: "rgba(255,68,102,0.3)" } : {}}
+          >
+            <span>
+              {allPuzzlesSolved
+                ? "⚠ BOSS LEVEL — ENTER"
+                : `⚠ BOSS LEVEL  ${totalSolved}/${TOTAL_PUZZLES}`}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Puzzle Modal */}
+      {/* Puzzle Modal (description + answer) */}
       {activePuzzle && (
         <PuzzleModal
           puzzle={activePuzzle}
           onClose={() => { setActivePuzzle(null); setModalResult(null); }}
           onSubmit={handleSubmit}
           result={modalResult}
+        />
+      )}
+
+      {/* Clue Popup (after correct answer or clicking solved puzzle) */}
+      {cluePopup && (
+        <ClueModal
+          clue={cluePopup.clue}
+          puzzleName={cluePopup.puzzleName}
+          onClose={() => setCluePopup(null)}
         />
       )}
 
