@@ -1,13 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/BossLevel.css";
-
-const BOSS_DESCRIPTIONS = {
-  Red: "FINAL DIRECTIVE — RED TRAIL: A digital phoenix rises from encrypted ashes. Your trail has led you through ciphers, networks, and physical landmarks. The final answer is the mythical creature reborn from fire that guides the Red Trail. Provide the codename: [Trailname]+[Creature]. Answer: REDPHOENIX",
-  Green: "FINAL DIRECTIVE — GREEN TRAIL: Ancient serpents guard the secrets of the deep digital forest. Your trail has woven through binary forests and physical summits. The answer is your trail color followed by the legendary serpentine beast. Answer: GREENDRAGON",
-  Blue: "FINAL DIRECTIVE — BLUE TRAIL: A master of the skies, swift and precise. Your trail soared through packets and spectral wonders. The final code is your trail color followed by the aerial predator. Answer: BLUEFALCON",
-};
 
 export default function BossLevel() {
   const navigate = useNavigate();
@@ -18,9 +12,36 @@ export default function BossLevel() {
   const [result, setResult] = useState(null);
   const [penalty, setPenalty] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [description, setDescription] = useState("Loading mission briefing...");
 
   useEffect(() => {
     if (!teamName) navigate("/login");
+    // Fetch boss description from DB
+    if (trailType) {
+      axios.get(`/api/boss/description/${trailType}`)
+        .then((res) => setDescription(res.data.description || "No briefing available."))
+        .catch(() => setDescription("Unable to load mission briefing."));
+    }
+  }, [teamName, trailType, navigate]);
+
+  // Poll for game-ended status — redirect if admin ends game while on boss level
+  useEffect(() => {
+    const poll = setInterval(async () => {
+      try {
+        const res = await axios.get(`/api/user/${teamName}`);
+        if (res.data.gameEnded) {
+          clearInterval(poll);
+          if (res.data.SafeStatus) {
+            navigate("/success");
+          } else {
+            navigate("/failure");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 5000);
+    return () => clearInterval(poll);
   }, [teamName, navigate]);
 
   const handleSubmit = async () => {
@@ -63,9 +84,7 @@ export default function BossLevel() {
 
         <div className="bl-puzzle-box">
           <span className="bl-puzzle-label">Mission Briefing</span>
-          <div className="bl-puzzle-desc">
-            {BOSS_DESCRIPTIONS[trailType] || BOSS_DESCRIPTIONS["Red"]}
-          </div>
+          <div className="bl-puzzle-desc">{description}</div>
 
           <div className="bl-form">
             <label className="bl-input-label">Final Answer</label>
