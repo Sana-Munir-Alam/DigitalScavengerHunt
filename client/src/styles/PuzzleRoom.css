@@ -398,6 +398,28 @@
   border-left: 3px solid var(--pr-primary);
 }
 
+.pr-modal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 9px 16px;
+  background: rgba(0,229,255,0.05);
+  border: 1px solid rgba(0,229,255,0.3);
+  color: var(--pr-primary);
+  font-family: var(--pr-font);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.pr-modal-link:hover {
+  background: rgba(0,229,255,0.12);
+  border-color: var(--pr-primary);
+  box-shadow: 0 0 10px rgba(0,229,255,0.2);
+}
+
 .pr-modal-input-group {
   display: flex;
   flex-direction: column;

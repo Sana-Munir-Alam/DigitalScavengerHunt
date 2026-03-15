@@ -118,8 +118,12 @@ function PuzzleModal({ puzzle, onClose, onSubmit, result }) {
           {puzzle.puzzleName || "Classification: ACTIVE CHALLENGE"}
         </div>
         <div className="pr-modal-desc">{puzzle.description}</div>
-
-        {puzzle.status !== 2 && (
+        
+        {puzzle.link && (
+          <a href={puzzle.link} target="_blank" rel="noopener noreferrer" className="pr-modal-link">
+            📎 Open Puzzle File
+          </a>
+        )}
           <>
             <div className="pr-modal-input-group">
               <label className="pr-modal-label">Submit Answer</label>
@@ -138,7 +142,7 @@ function PuzzleModal({ puzzle, onClose, onSubmit, result }) {
               <span>SUBMIT ANSWER</span>
             </button>
           </>
-        )}
+          
 
         {result && (
           <div className={`pr-modal-result ${result.type === "correct" ? "correct-res" : "wrong-res"}`}>
@@ -318,6 +322,7 @@ export default function PuzzleRoom() {
       code,
       description: puzzle?.Description || "Loading...",
       puzzleName: puzzle?.PuzzleName || code,
+      link: puzzle?.Link || "",
       status,
     });
     setActiveType(type);
@@ -339,6 +344,7 @@ export default function PuzzleRoom() {
         code,
         description: puzzle?.Description || "Loading...",
         puzzleName: puzzle?.PuzzleName || code,
+        link: puzzle?.Link || "",
         status: 1,
       });
       setActiveType(type);
