@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
   PhysicalPuzzleArray: { type: [String], default: Array(5).fill("") },
   PhysicalPuzzleTime: { type: [Number], default: Array(5).fill(0) },
 
+  // Boss level timing
+  BossStartTime: { type: Number, default: null },   // elapsed seconds when boss was unlocked
+  BossCompleteTime: { type: Number, default: null }, // elapsed seconds when boss was solved
+
   Penalty: { type: Number, default: 0 },
   TotalScore: { type: Number, default: 0 },
   FinalSubmissionTime: { type: Number, default: null },
@@ -47,17 +51,20 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// Puzzle Answer Schema
-const puzzleAnswerSchema = new mongoose.Schema({
-  Trail1TechPuzzleArray: { type: [String], default: [] },
-  Trail2TechPuzzleArray: { type: [String], default: [] },
-  Trail3TechPuzzleArray: { type: [String], default: [] },
-  Trail1PhysicalPuzzleArray: { type: [String], default: [] },
-  Trail2PhysicalPuzzleArray: { type: [String], default: [] },
-  Trail3PhysicalPuzzleArray: { type: [String], default: [] },
+// ─────────────────────────────────────────────
+// NEW: Puzzle Schema (questions on DB)
+// ─────────────────────────────────────────────
+const puzzleSchema = new mongoose.Schema({
+  PuzzleName: { type: String, required: true },
+  TrailColor: { type: String, enum: ["Red", "Green", "Blue"], required: true },
+  TrailType: { type: String, enum: ["Tech", "Physical"], required: true },
+  PuzzleIndex: { type: Number, required: true }, // 0-based index within trail+type
+  Description: { type: String, required: true },
+  Answer: { type: String, required: true },
+  Clue: { type: String, required: true },
 });
 
-const PuzzleAnswer = mongoose.model("PuzzleAnswer", puzzleAnswerSchema);
+const Puzzle = mongoose.model("Puzzle", puzzleSchema);
 
 // Flag Schema
 const flagSchema = new mongoose.Schema({
@@ -76,6 +83,9 @@ const bossSchema = new mongoose.Schema({
   Trail1Answer: String,
   Trail2Answer: String,
   Trail3Answer: String,
+  Trail1Description: String,
+  Trail2Description: String,
+  Trail3Description: String,
 });
 
 const Boss = mongoose.model("Boss", bossSchema);
@@ -83,6 +93,7 @@ const Boss = mongoose.model("Boss", bossSchema);
 // Global game state schema
 const gameStateSchema = new mongoose.Schema({
   GameActive: { type: Boolean, default: false },
+  GameEnded: { type: Boolean, default: false },   // NEW: tracks if admin ended game
   GameStartTime: { type: Date, default: null },
   GameDuration: { type: Number, default: 7200 }, // 2 hours in seconds
 });
@@ -100,16 +111,6 @@ function getTrailIndex(trailType) {
   return null;
 }
 
-async function getAnswers(trailType) {
-  const answers = await PuzzleAnswer.findOne();
-  if (!answers) return null;
-  const idx = getTrailIndex(trailType);
-  return {
-    tech: answers[`Trail${idx}TechPuzzleArray`],
-    physical: answers[`Trail${idx}PhysicalPuzzleArray`],
-  };
-}
-
 async function getFlags(trailType) {
   const flags = await Flag.findOne();
   if (!flags) return null;
@@ -118,10 +119,6 @@ async function getFlags(trailType) {
     tech: flags[`Trail${idx}TechFlagString`],
     physical: flags[`Trail${idx}PhysicalFlagString`],
   };
-}
-
-function calculateElapsedSeconds(gameStartTime) {
-  return Math.floor((Date.now() - new Date(gameStartTime).getTime()) / 1000);
 }
 
 // ─────────────────────────────────────────────
@@ -137,63 +134,58 @@ app.post("/api/admin/initialize", async (req, res) => {
   }
 
   try {
-    // Seed puzzle answers (realistic tech puzzle answers + scavenger words)
-    await PuzzleAnswer.deleteMany({});
-    await PuzzleAnswer.create({
-      Trail1TechPuzzleArray: [
-        "CIPHER",
-        "NETWORK",
-        "PROTOCOL",
-        "FIREWALL",
-        "ENCRYPT",
-        "PAYLOAD",
-        "ROOTKIT",
-        "SANDBOX",
-      ],
-      Trail2TechPuzzleArray: [
-        "BINARY",
-        "KERNEL",
-        "DAEMON",
-        "SOCKET",
-        "BUFFER",
-        "MALLOC",
-        "THREAD",
-        "VECTOR",
-      ],
-      Trail3TechPuzzleArray: [
-        "PACKET",
-        "ROUTER",
-        "SUBNET",
-        "GATEWAY",
-        "COOKIE",
-        "SCRIPT",
-        "ZOMBIE",
-        "TROJAN",
-      ],
-      Trail1PhysicalPuzzleArray: [
-        "LABYRINTH",
-        "COMPASS",
-        "MERIDIAN",
-        "HORIZON",
-        "ECLIPSE",
-      ],
-      Trail2PhysicalPuzzleArray: [
-        "ALTITUDE",
-        "TRAVERSE",
-        "PINNACLE",
-        "DESCENT",
-        "SENTINEL",
-      ],
-      Trail3PhysicalPuzzleArray: [
-        "VORTEX",
-        "PHANTOM",
-        "NEXUS",
-        "SPECTRUM",
-        "CATALYST",
-      ],
-    });
+    // Seed Puzzles collection
+    await Puzzle.deleteMany({});
+    const puzzleSeed = [
+      // RED TECH
+      { PuzzleName: "Classical Cipher", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 0, Description: "A substitution method used in classical cryptography where each letter is replaced by another. Used in ancient Rome. What is this technique called?", Answer: "CIPHER", Clue: "🔴 Clue #RT1: Look for the Caesar's wheel near the entrance — rotate 13 steps." },
+      { PuzzleName: "Connected Systems", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 1, Description: "The interconnected system of devices sharing data. Every device on the internet is part of this. A fundamental concept in IT.", Answer: "NETWORK", Clue: "🔴 Clue #RT2: The server room map on Level 2 holds your next hint." },
+      { PuzzleName: "Communication Rules", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 2, Description: "A set of rules governing communication between devices. TCP/IP is an example. Without this, systems cannot communicate.", Answer: "PROTOCOL", Clue: "🔴 Clue #RT3: Check the OSI model poster in Lab A." },
+      { PuzzleName: "Digital Shield", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 3, Description: "A security system that monitors and filters network traffic. Acts as the first line of digital defense.", Answer: "FIREWALL", Clue: "🔴 Clue #RT4: The security operations desk has a sticky note underneath." },
+      { PuzzleName: "Data Wrapper", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 4, Description: "The data carried by a network packet — the actual message or malicious code embedded within.", Answer: "PAYLOAD", Clue: "🔴 Clue #RT5: Binary code on the whiteboard decodes to your next location." },
+      { PuzzleName: "Conversion Shield", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 5, Description: "The process of converting readable data into an unreadable format. Requires a key to reverse. Essential for secure communication.", Answer: "ENCRYPT", Clue: "🔴 Clue #RT6: The lock cabinet near exit B — combination is 4-2-9." },
+      { PuzzleName: "Hidden Malware", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 6, Description: "Malicious software that gains privileged access to a computer system while hiding its presence.", Answer: "ROOTKIT", Clue: "🔴 Clue #RT7: Underneath the keyboard at Station 7 is your next clue." },
+      { PuzzleName: "Safe Testing", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 7, Description: "An isolated environment for testing untrusted programs safely without affecting the host system.", Answer: "SANDBOX", Clue: "🔴 Clue #RT8: Final tech clue — the whiteboard equation gives the boss key fragment." },
+      // RED PHYSICAL
+      { PuzzleName: "The Maze", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 0, Description: "Find the board that displays the maze of the event venue. The shape it forms is the answer.", Answer: "LABYRINTH", Clue: "🔴 Clue #RP1: The next physical clue is hidden near the main entrance pillar." },
+      { PuzzleName: "Direction Finder", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 1, Description: "A navigational tool always pointing north. Find the physical one hidden in your zone.", Answer: "COMPASS", Clue: "🔴 Clue #RP2: Follow the red arrow markings on the floor to Room 3." },
+      { PuzzleName: "Zero Longitude", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 2, Description: "An imaginary line running through the poles. The longitude of zero degrees.", Answer: "MERIDIAN", Clue: "🔴 Clue #RP3: The globe model in the library has a note attached." },
+      { PuzzleName: "Sky meets Earth", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 3, Description: "Where the sky meets the earth visually. Find the marked zone that represents this boundary.", Answer: "HORIZON", Clue: "🔴 Clue #RP4: Look at the rooftop terrace — something is taped to the railing." },
+      { PuzzleName: "Blocked Sun", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 4, Description: "When the moon blocks the sun. A clue hidden in the astronomy exhibit.", Answer: "ECLIPSE", Clue: "🔴 Clue #RP5: Congratulations! Proceed to the BOSS LEVEL using your collected clues." },
+      // GREEN TECH
+      { PuzzleName: "Binary World", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 0, Description: "The base-2 numeral system using only 0s and 1s. The language of all computers.", Answer: "BINARY", Clue: "🟢 Clue #GT1: The binary poster near the elevator decodes to your next location." },
+      { PuzzleName: "OS Core", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 1, Description: "The core of the operating system. It manages communication between hardware and software.", Answer: "KERNEL", Clue: "🟢 Clue #GT2: Check the terminal at Station 3 — run `ls -la /clues`." },
+      { PuzzleName: "Background Process", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 2, Description: "A background process in Unix/Linux systems that starts automatically and runs continuously.", Answer: "DAEMON", Clue: "🟢 Clue #GT3: The service list printout on the noticeboard has a circled entry." },
+      { PuzzleName: "Network Endpoint", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 3, Description: "An endpoint for sending and receiving data across a network. Used in TCP/UDP communication.", Answer: "SOCKET", Clue: "🟢 Clue #GT4: Port 8080 on the demo server has a hidden message in the header." },
+      { PuzzleName: "Temp Memory", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 4, Description: "A region of memory used to temporarily store data during transfers. An overflow here can crash systems.", Answer: "BUFFER", Clue: "🟢 Clue #GT5: Memory map diagram on Lab B wall — the red region label is your clue." },
+      { PuzzleName: "Memory Alloc", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 5, Description: "A C function that dynamically allocates memory during runtime. Failure to free it causes leaks.", Answer: "MALLOC", Clue: "🟢 Clue #GT6: The C code snippet framed near the exit — line 17 is significant." },
+      { PuzzleName: "Parallel Execution", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 6, Description: "The smallest unit of execution within a process. Programs can run many of these simultaneously.", Answer: "THREAD", Clue: "🟢 Clue #GT7: The process tree diagram — follow the branch labeled PID 404." },
+      { PuzzleName: "Dynamic Array", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 7, Description: "A data structure that stores direction and magnitude. Also used in C++ STL for dynamic arrays.", Answer: "VECTOR", Clue: "🟢 Clue #GT8: Final tech clue — the math arrow on whiteboard gives the boss key fragment." },
+      // GREEN PHYSICAL
+      { PuzzleName: "Height Above Sea", TrailColor: "Green", TrailType: "Physical", PuzzleIndex: 0, Description: "A measurement of height above sea level. Find the sign showing this metric in the stairwell.", Answer: "ALTITUDE", Clue: "🟢 Clue #GP1: The stairwell sign on Level 3 points to the next checkpoint." },
+      { PuzzleName: "Cross Terrain", TrailColor: "Green", TrailType: "Physical", PuzzleIndex: 1, Description: "To move across a terrain — a hiking or mapping term. Find the physical route marked in your zone.", Answer: "TRAVERSE", Clue: "🟢 Clue #GP2: Follow the green tape markings on the floor to Corridor 5." },
+      { PuzzleName: "Summit Point", TrailColor: "Green", TrailType: "Physical", PuzzleIndex: 2, Description: "The highest point of a mountain or achievement. Look for the marked summit illustration.", Answer: "PINNACLE", Clue: "🟢 Clue #GP3: The rooftop garden — look for the flag pole marker." },
+      { PuzzleName: "Going Down", TrailColor: "Green", TrailType: "Physical", PuzzleIndex: 3, Description: "Moving downward from a height. Find the descending arrow path in the physical zone.", Answer: "DESCENT", Clue: "🟢 Clue #GP4: The basement stairs — something is attached to step 13." },
+      { PuzzleName: "The Guardian", TrailColor: "Green", TrailType: "Physical", PuzzleIndex: 4, Description: "A watchful guardian or guard post. Find the standing figure or marked post in your zone.", Answer: "SENTINEL", Clue: "🟢 Clue #GP5: Congratulations! Proceed to the BOSS LEVEL using your collected clues." },
+      // BLUE TECH
+      { PuzzleName: "Data Unit", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 0, Description: "A unit of data transmitted over a network. Contains headers and a payload. Routers forward these.", Answer: "PACKET", Clue: "🔵 Clue #BT1: Wireshark capture printout on desk C — filter `tcp.port == 443`." },
+      { PuzzleName: "Traffic Director", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 1, Description: "A networking device that forwards data packets between computer networks using routing tables.", Answer: "ROUTER", Clue: "🔵 Clue #BT2: The network diagram on wall — trace the path from 192.168.1.1." },
+      { PuzzleName: "Network Division", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 2, Description: "A division of a network — IP addresses are grouped into these for better management.", Answer: "SUBNET", Clue: "🔵 Clue #BT3: CIDR notation chart — find the /24 block row." },
+      { PuzzleName: "Network Gate", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 3, Description: "The node in a network that routes traffic to other networks. Your home has one of these.", Answer: "GATEWAY", Clue: "🔵 Clue #BT4: The default route sticker is on the back of the switch rack." },
+      { PuzzleName: "Browser Tracker", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 4, Description: "A small piece of data stored by a browser that tracks session state. Can be stolen in XSS attacks.", Answer: "COOKIE", Clue: "🔵 Clue #BT5: Browser dev tools demo — check the Application tab for a hidden value." },
+      { PuzzleName: "Web Code", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 5, Description: "Code embedded in a webpage that runs in the browser. Can be used for both functionality and attacks.", Answer: "SCRIPT", Clue: "🔵 Clue #BT6: The HTML source printout — look at the commented-out section." },
+      { PuzzleName: "Bot Soldier", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 6, Description: "A compromised computer in a botnet that obeys commands without the owner's knowledge.", Answer: "ZOMBIE", Clue: "🔵 Clue #BT7: The botnet diagram — count the nodes in cluster 3." },
+      { PuzzleName: "Disguised Threat", TrailColor: "Blue", TrailType: "Tech", PuzzleIndex: 7, Description: "Malware disguised as legitimate software that creates backdoors. Named after a Greek myth.", Answer: "TROJAN", Clue: "🔵 Clue #BT8: Final tech clue — the Greek mythology poster gives the boss key fragment." },
+      // BLUE PHYSICAL
+      { PuzzleName: "Air Spiral", TrailColor: "Blue", TrailType: "Physical", PuzzleIndex: 0, Description: "A violent rotating column of air. Find the spiral diagram in your physical zone.", Answer: "VORTEX", Clue: "🔵 Clue #BP1: The weather station model — check the anemometer label." },
+      { PuzzleName: "The Ghost", TrailColor: "Blue", TrailType: "Physical", PuzzleIndex: 1, Description: "Something that appears without a clear source — ghostly. Find the hidden marker in your zone.", Answer: "PHANTOM", Clue: "🔵 Clue #BP2: UV light is needed — check the hidden ink near locker 7." },
+      { PuzzleName: "Connection Hub", TrailColor: "Blue", TrailType: "Physical", PuzzleIndex: 2, Description: "A central hub where systems or networks connect. Find the physical connection point in your zone.", Answer: "NEXUS", Clue: "🔵 Clue #BP3: The patch panel room — look for the labeled port at position 42." },
+      { PuzzleName: "Light Range", TrailColor: "Blue", TrailType: "Physical", PuzzleIndex: 3, Description: "The range of colors of light. Find the prism or color strip displayed in your zone.", Answer: "SPECTRUM", Clue: "🔵 Clue #BP4: The optics lab — the prism on the window ledge has a note underneath." },
+      { PuzzleName: "Reaction Trigger", TrailColor: "Blue", TrailType: "Physical", PuzzleIndex: 4, Description: "An agent that triggers a reaction without being consumed. Find the chemical symbol display.", Answer: "CATALYST", Clue: "🔵 Clue #BP5: Congratulations! Proceed to the BOSS LEVEL using your collected clues." },
+    ];
+    await Puzzle.insertMany(puzzleSeed);
 
-    // Seed flags (13-character strings)
+    // Seed flags
     await Flag.deleteMany({});
     await Flag.create({
       Trail1TechFlagString: "R3D_T3CH_FL4G",
@@ -210,12 +202,15 @@ app.post("/api/admin/initialize", async (req, res) => {
       Trail1Answer: "REDPHOENIX",
       Trail2Answer: "GREENDRAGON",
       Trail3Answer: "BLUEFALCON",
+      Trail1Description: "FINAL DIRECTIVE — RED TRAIL: A digital phoenix rises from encrypted ashes. Your trail has led you through ciphers, networks, and physical landmarks. The final answer is the mythical creature reborn from fire that guides the Red Trail. Provide the codename: [Trailname]+[Creature].",
+      Trail2Description: "FINAL DIRECTIVE — GREEN TRAIL: Ancient serpents guard the secrets of the deep digital forest. Your trail has woven through binary forests and physical summits. The answer is your trail color followed by the legendary serpentine beast.",
+      Trail3Description: "FINAL DIRECTIVE — BLUE TRAIL: A master of the skies, swift and precise. Your trail soared through packets and spectral wonders. The final code is your trail color followed by the aerial predator.",
     });
 
     // Ensure a global GameState doc exists
     const existing = await GameState.findOne();
     if (!existing) {
-      await GameState.create({ GameActive: false, GameStartTime: null });
+      await GameState.create({ GameActive: false, GameEnded: false, GameStartTime: null });
     }
 
     res.json({ message: "Game initialized successfully" });
@@ -231,8 +226,6 @@ app.post("/api/admin/initialize", async (req, res) => {
 // Admin login
 app.post("/api/admin/login", async (req, res) => {
   const { username, password } = req.body;
-  console.log("Received:", JSON.stringify(username), JSON.stringify(password));
-  console.log("Expected:", JSON.stringify(process.env.AdminUsername), JSON.stringify(process.env.AdminPassword));
   if (
     username === process.env.AdminUsername &&
     password === process.env.AdminPassword
@@ -253,9 +246,7 @@ app.post("/api/admin/create-user", async (req, res) => {
   }
 
   try {
-    const existing = await User.findOne({
-      TeamName: teamName.toUpperCase(),
-    });
+    const existing = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (existing) {
       return res.status(400).json({ message: "Team name already exists" });
     }
@@ -287,10 +278,9 @@ app.post("/api/admin/start-game", async (req, res) => {
     const now = new Date();
     await GameState.findOneAndUpdate(
       {},
-      { GameActive: true, GameStartTime: now },
+      { GameActive: true, GameEnded: false, GameStartTime: now },
       { upsert: true }
     );
-    // Allow all users to start
     await User.updateMany({}, { GameStartStatus: true });
     res.json({ message: "Game started", startTime: now });
   } catch (err) {
@@ -298,7 +288,7 @@ app.post("/api/admin/start-game", async (req, res) => {
   }
 });
 
-// Deactivate start game
+// Deactivate game (disable start button AND entering mission)
 app.post("/api/admin/deactivate-game", async (req, res) => {
   const { username, password } = req.body;
   if (
@@ -317,7 +307,7 @@ app.post("/api/admin/deactivate-game", async (req, res) => {
   }
 });
 
-// End game
+// End game — sets GameEnded flag, redirects all users to success/failure
 app.post("/api/admin/end-game", async (req, res) => {
   const { username, password } = req.body;
   if (
@@ -330,9 +320,9 @@ app.post("/api/admin/end-game", async (req, res) => {
   try {
     await GameState.findOneAndUpdate(
       {},
-      { GameActive: false, GameStartTime: null }
+      { GameActive: false, GameEnded: true, GameStartTime: null }
     );
-    await User.updateMany({}, { GameStartStatus: false, GameStartTime: null });
+    await User.updateMany({}, { GameStartStatus: false });
     res.json({ message: "Game ended" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -359,7 +349,7 @@ app.post("/api/admin/reset-timer", async (req, res) => {
   }
 });
 
-// Reset all user progress (keep accounts, wipe game state)
+// Reset all user progress
 app.post("/api/admin/reset-game", async (req, res) => {
   const { username, password } = req.body;
   if (username !== process.env.AdminUsername || password !== process.env.AdminPassword) {
@@ -377,11 +367,13 @@ app.post("/api/admin/reset-game", async (req, res) => {
       PhysicalPuzzleStatus: [0, 0, 0, 0, 0],
       PhysicalPuzzleArray: Array(5).fill(""),
       PhysicalPuzzleTime: Array(5).fill(0),
+      BossStartTime: null,
+      BossCompleteTime: null,
       Penalty: 0,
       TotalScore: 0,
       FinalSubmissionTime: null,
     });
-    await GameState.findOneAndUpdate({}, { GameActive: false, GameStartTime: null });
+    await GameState.findOneAndUpdate({}, { GameActive: false, GameEnded: false, GameStartTime: null });
     res.json({ message: "All user progress reset" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -397,7 +389,7 @@ app.post("/api/admin/delete-everything", async (req, res) => {
 
   try {
     await User.deleteMany({});
-    await PuzzleAnswer.deleteMany({});
+    await Puzzle.deleteMany({});
     await Flag.deleteMany({});
     await Boss.deleteMany({});
     await GameState.deleteMany({});
@@ -429,7 +421,37 @@ app.get("/api/admin/users", async (req, res) => {
 app.get("/api/game-state", async (req, res) => {
   try {
     const state = await GameState.findOne();
-    res.json(state || { GameActive: false, GameStartTime: null });
+    res.json(state || { GameActive: false, GameEnded: false, GameStartTime: null });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// PUZZLE CRUD (Admin can manage puzzles)
+// ─────────────────────────────────────────────
+
+// Get all puzzles for a trail (used by frontend)
+app.get("/api/puzzles/:trailColor", async (req, res) => {
+  try {
+    const { trailColor } = req.params;
+    const techPuzzles = await Puzzle.find({ TrailColor: trailColor, TrailType: "Tech" }).sort({ PuzzleIndex: 1 });
+    const physicalPuzzles = await Puzzle.find({ TrailColor: trailColor, TrailType: "Physical" }).sort({ PuzzleIndex: 1 });
+    res.json({ tech: techPuzzles, physical: physicalPuzzles });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Admin: update a puzzle
+app.put("/api/admin/puzzle/:id", async (req, res) => {
+  const { username, password, ...updates } = req.body;
+  if (username !== process.env.AdminUsername || password !== process.env.AdminPassword) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  try {
+    const puzzle = await Puzzle.findByIdAndUpdate(req.params.id, updates, { new: true });
+    res.json(puzzle);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -484,7 +506,12 @@ app.get("/api/user/:teamName", async (req, res) => {
       timeRemaining = Math.max(0, 7200 - elapsed);
     }
 
-    res.json({ ...user.toObject(), timeRemaining });
+    res.json({
+      ...user.toObject(),
+      timeRemaining,
+      gameEnded: gameState?.GameEnded || false,
+      gameActive: gameState?.GameActive || false,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -498,6 +525,13 @@ app.post("/api/user/start-game", async (req, res) => {
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    const gameState = await GameState.findOne();
+
+    // Check if game is deactivated
+    if (!gameState?.GameActive) {
+      return res.status(400).json({ message: "Game is not currently active" });
+    }
+
     if (!user.GameStartStatus) {
       return res.status(400).json({ message: "Game not activated by admin" });
     }
@@ -506,9 +540,7 @@ app.post("/api/user/start-game", async (req, res) => {
       return res.json({ message: "Game already started", user });
     }
 
-    const gameState = await GameState.findOne();
     const startTime = gameState?.GameStartTime || new Date();
-
     user.GameStartTime = startTime;
     await user.save();
 
@@ -531,28 +563,25 @@ app.post("/api/puzzle/tech/submit", async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.TechPuzzleStatusArray[puzzleIndex] === 2) {
-      return res.json({ result: "already_solved", message: "Already solved correctly" });
+      // Return the clue for already-solved puzzle
+      const puzzle = await Puzzle.findOne({ TrailColor: user.TrailType, TrailType: "Tech", PuzzleIndex: puzzleIndex });
+      return res.json({ result: "already_solved", clue: puzzle?.Clue || "" });
     }
 
     if (user.TechPuzzleStatusArray[puzzleIndex] !== 1) {
       return res.status(400).json({ message: "Puzzle is locked" });
     }
 
-    const trailAnswers = await getAnswers(user.TrailType);
-    if (!trailAnswers) return res.status(500).json({ message: "Answers not found" });
+    const puzzle = await Puzzle.findOne({ TrailColor: user.TrailType, TrailType: "Tech", PuzzleIndex: puzzleIndex });
+    if (!puzzle) return res.status(500).json({ message: "Puzzle not found" });
 
-    const correctAnswer = trailAnswers.tech[puzzleIndex];
-    const isCorrect =
-      answer.trim().toUpperCase() === correctAnswer.toUpperCase();
+    const isCorrect = answer.trim().toUpperCase() === puzzle.Answer.toUpperCase();
 
     const gameState = await GameState.findOne();
     const elapsed = gameState?.GameStartTime
-      ? Math.floor(
-          (Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000
-        )
+      ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
       : 0;
 
-    // Calculate time since last puzzle solved
     let timeSinceLast = elapsed;
     if (puzzleIndex > 0) {
       timeSinceLast = elapsed - (user.TechPuzzleTime[puzzleIndex - 1] || 0);
@@ -564,7 +593,6 @@ app.post("/api/puzzle/tech/submit", async (req, res) => {
       user.TechPuzzleTime[puzzleIndex] = elapsed;
       user.TotalScore += 10;
 
-      // Unlock next tech puzzle
       if (puzzleIndex < 7) {
         user.TechPuzzleStatusArray[puzzleIndex + 1] = 1;
       }
@@ -580,7 +608,7 @@ app.post("/api/puzzle/tech/submit", async (req, res) => {
       user.markModified("PhysicalPuzzleStatus");
       await user.save();
 
-      return res.json({ result: "correct", score: user.TotalScore, timeSinceLast });
+      return res.json({ result: "correct", score: user.TotalScore, timeSinceLast, clue: puzzle.Clue });
     } else {
       user.TechPuzzleStatusArray[puzzleIndex] = 3;
       user.Penalty += 0.1;
@@ -624,25 +652,22 @@ app.post("/api/puzzle/physical/submit", async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.PhysicalPuzzleStatus[puzzleIndex] === 2) {
-      return res.json({ result: "already_solved" });
+      const puzzle = await Puzzle.findOne({ TrailColor: user.TrailType, TrailType: "Physical", PuzzleIndex: puzzleIndex });
+      return res.json({ result: "already_solved", clue: puzzle?.Clue || "" });
     }
 
     if (user.PhysicalPuzzleStatus[puzzleIndex] !== 1) {
       return res.status(400).json({ message: "Puzzle is locked" });
     }
 
-    const trailAnswers = await getAnswers(user.TrailType);
-    if (!trailAnswers) return res.status(500).json({ message: "Answers not found" });
+    const puzzle = await Puzzle.findOne({ TrailColor: user.TrailType, TrailType: "Physical", PuzzleIndex: puzzleIndex });
+    if (!puzzle) return res.status(500).json({ message: "Puzzle not found" });
 
-    const correctAnswer = trailAnswers.physical[puzzleIndex];
-    const isCorrect =
-      answer.trim().toUpperCase() === correctAnswer.toUpperCase();
+    const isCorrect = answer.trim().toUpperCase() === puzzle.Answer.toUpperCase();
 
     const gameState = await GameState.findOne();
     const elapsed = gameState?.GameStartTime
-      ? Math.floor(
-          (Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000
-        )
+      ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
       : 0;
 
     if (isCorrect) {
@@ -660,7 +685,7 @@ app.post("/api/puzzle/physical/submit", async (req, res) => {
       user.markModified("PhysicalPuzzleTime");
       await user.save();
 
-      return res.json({ result: "correct", score: user.TotalScore });
+      return res.json({ result: "correct", score: user.TotalScore, clue: puzzle.Clue });
     } else {
       user.PhysicalPuzzleStatus[puzzleIndex] = 3;
       user.Penalty += 0.1;
@@ -695,6 +720,23 @@ app.post("/api/puzzle/physical/retry", async (req, res) => {
   }
 });
 
+// Get puzzle clue (for already-solved puzzles, re-show clue on click)
+app.get("/api/puzzle/clue", async (req, res) => {
+  const { teamName, puzzleIndex, type } = req.query;
+  try {
+    const user = await User.findOne({ TeamName: teamName.toUpperCase() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const trailType = type === "tech" ? "Tech" : "Physical";
+    const puzzle = await Puzzle.findOne({ TrailColor: user.TrailType, TrailType: trailType, PuzzleIndex: parseInt(puzzleIndex) });
+    if (!puzzle) return res.status(404).json({ message: "Puzzle not found" });
+
+    res.json({ clue: puzzle.Clue, description: puzzle.Description, puzzleName: puzzle.PuzzleName });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ─────────────────────────────────────────────
 // BOSS LEVEL
 // ─────────────────────────────────────────────
@@ -710,10 +752,18 @@ app.post("/api/boss/verify-flag", async (req, res) => {
     const flags = await getFlags(user.TrailType);
     if (!flags) return res.status(500).json({ message: "Flags not configured" });
 
-    // The combined flag is tech flag + physical flag concatenated
     const combinedFlag = flags.tech + flags.physical;
 
     if (flagInput.trim() === combinedFlag) {
+      // Record when boss was unlocked/accessed
+      const gameState = await GameState.findOne();
+      const elapsed = gameState?.GameStartTime
+        ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
+        : 0;
+      if (!user.BossStartTime) {
+        user.BossStartTime = elapsed;
+        await user.save();
+      }
       return res.json({ success: true });
     } else {
       return res.json({ success: false, message: "Trail corrupted. You lost your path, officer." });
@@ -736,20 +786,18 @@ app.post("/api/boss/submit", async (req, res) => {
 
     const idx = getTrailIndex(user.TrailType);
     const correctAnswer = bossAnswers[`Trail${idx}Answer`];
-    const isCorrect =
-      answer.trim().toUpperCase() === correctAnswer.toUpperCase();
+    const isCorrect = answer.trim().toUpperCase() === correctAnswer.toUpperCase();
 
     if (isCorrect) {
       const gameState = await GameState.findOne();
       const elapsed = gameState?.GameStartTime
-        ? Math.floor(
-            (Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000
-          )
+        ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
         : 0;
 
       user.SafeStatus = true;
       user.FinalSubmissionTime = elapsed;
-      user.TotalScore += 50; // Boss level bonus
+      user.BossCompleteTime = elapsed;
+      user.TotalScore += 50;
       await user.save();
 
       return res.json({
@@ -764,6 +812,19 @@ app.post("/api/boss/submit", async (req, res) => {
 
       return res.json({ success: false, message: "Boss answer incorrect" });
     }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get boss description for a trail
+app.get("/api/boss/description/:trailType", async (req, res) => {
+  try {
+    const bossAnswers = await Boss.findOne();
+    if (!bossAnswers) return res.status(404).json({ message: "Boss not configured" });
+
+    const idx = getTrailIndex(req.params.trailType);
+    res.json({ description: bossAnswers[`Trail${idx}Description`] });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
