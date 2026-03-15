@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/LeaderBoard.css";
@@ -37,7 +37,7 @@ export default function LeaderBoard() {
   }, []);
 
   const top3 = teams.slice(0, 3);
-  const rest = teams.slice(3);
+  // const rest = teams.slice(3);
 
   const goBack = () => {
     if (role === "admin") navigate("/admin");
