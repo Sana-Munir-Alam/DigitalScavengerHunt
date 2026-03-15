@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/HomePage.css";
@@ -19,6 +19,7 @@ export default function HomePage() {
   const [timeRemaining, setTimeRemaining] = useState(7200);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameStartEnabled, setGameStartEnabled] = useState(false);
+  const [gameActive, setGameActive] = useState(false); // admin's GameActive flag
   const [loading, setLoading] = useState(false);
 
   const fetchUserData = useCallback(async () => {
@@ -26,10 +27,15 @@ export default function HomePage() {
       const res = await axios.get(`/api/user/${teamName}`);
       const data = res.data;
       setGameStartEnabled(data.GameStartStatus);
+      setGameActive(data.gameActive);
+
       if (data.GameStartTime) {
         setGameStarted(true);
         setTimeRemaining(data.timeRemaining);
       }
+
+      // If admin ended game — redirect all non-Home users
+      // HomePage stays on HomePage intentionally, so we do NOT redirect here
     } catch (err) {
       console.error(err);
     }
@@ -77,6 +83,11 @@ export default function HomePage() {
 
   const isDanger = timeRemaining < 600;
 
+  // "Enter Mission" is only active if game has started AND admin's game is still active
+  const canEnterMission = gameStarted && gameActive;
+  // "Start Game" button is active only if admin enabled it AND game is active
+  const canStartGame = gameStartEnabled && gameActive && !gameStarted;
+
   return (
     <div className="hp-page">
       <div className="hp-bg-grid" />
@@ -92,8 +103,8 @@ export default function HomePage() {
           <span className={`hp-trail-badge ${trailType}`}>{trailType?.toUpperCase()} TRAIL</span>
         </div>
         <div className="hp-header-right">
-          <span className={`hp-game-status ${gameStarted ? "active" : "inactive"}`}>
-            {gameStarted ? "● MISSION ACTIVE" : "○ STANDBY"}
+          <span className={`hp-game-status ${gameStarted && gameActive ? "active" : "inactive"}`}>
+            {gameStarted && gameActive ? "● MISSION ACTIVE" : gameStarted && !gameActive ? "⏸ PAUSED" : "○ STANDBY"}
           </span>
         </div>
       </header>
@@ -117,18 +128,35 @@ export default function HomePage() {
             )}
           </div>
           <span className="hp-timer-status">
-            {gameStarted ? "COUNTDOWN ACTIVE" : gameStartEnabled ? "READY — AWAITING START" : "PENDING ADMIN ACTIVATION"}
+            {gameStarted && gameActive
+              ? "COUNTDOWN ACTIVE"
+              : gameStarted && !gameActive
+              ? "MISSION PAUSED BY ADMIN"
+              : gameStartEnabled
+              ? "READY — AWAITING START"
+              : "PENDING ADMIN ACTIVATION"}
           </span>
         </div>
 
         <div className="hp-actions">
-          <button
-            className="hp-btn-primary"
-            onClick={gameStarted ? () => navigate("/puzzle-room") : handleStartGame}
-            disabled={!gameStartEnabled && !gameStarted}
-          >
-            {loading ? "INITIALIZING..." : gameStarted ? "▶ ENTER MISSION" : "▶ START GAME"}
-          </button>
+          {gameStarted ? (
+            <button
+              className="hp-btn-primary"
+              onClick={() => navigate("/puzzle-room")}
+              disabled={!canEnterMission}
+              style={!canEnterMission ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+            >
+              {canEnterMission ? "▶ ENTER MISSION" : "⏸ MISSION PAUSED"}
+            </button>
+          ) : (
+            <button
+              className="hp-btn-primary"
+              onClick={handleStartGame}
+              disabled={!canStartGame || loading}
+            >
+              {loading ? "INITIALIZING..." : "▶ START GAME"}
+            </button>
+          )}
           <button className="hp-btn-secondary" onClick={() => navigate("/leaderboard")}>
             ◈ LEADERBOARD
           </button>
