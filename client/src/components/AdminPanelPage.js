@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/AdminPanelPage.css";
@@ -31,6 +31,10 @@ function TeamCard({ user, index }) {
   const physStatuses = user.PhysicalPuzzleStatus || Array(5).fill(0);
   const techTimes = user.TechPuzzleTime || Array(8).fill(0);
   const physTimes = user.PhysicalPuzzleTime || Array(5).fill(0);
+
+  // Boss timing
+  const bossTime = user.BossCompleteTime || null;
+  const trailTime = user.BossStartTime || null; // time when boss was first accessed
 
   return (
     <div
@@ -76,6 +80,25 @@ function TeamCard({ user, index }) {
               {status === 2 ? formatMinSec(physTimes[i]) : status === 3 ? "✗" : status === 1 ? "!" : i + 1}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Boss Level Timing */}
+      <div className="ap-puzzle-section" style={{ marginTop: 8, borderTop: "1px solid rgba(255,68,102,0.15)", paddingTop: 8 }}>
+        <span className="ap-puzzle-label" style={{ color: "rgba(255,68,102,0.7)" }}>Boss Level</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <div style={{ fontSize: "10px", color: "var(--ap-muted)", letterSpacing: "1px" }}>
+            <span style={{ color: "rgba(255,170,0,0.8)" }}>BossTime: </span>
+            <span style={{ color: bossTime ? "var(--ap-correct)" : "var(--ap-locked)" }}>
+              {bossTime ? formatMinSec(bossTime) : "--"}
+            </span>
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--ap-muted)", letterSpacing: "1px" }}>
+            <span style={{ color: "rgba(255,170,0,0.8)" }}>TrailTime: </span>
+            <span style={{ color: trailTime ? "var(--ap-unlocked)" : "var(--ap-locked)" }}>
+              {trailTime ? formatMinSec(trailTime) : "--"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -225,43 +248,47 @@ export default function AdminPanelPage() {
       <header className="ap-header">
         <div className="ap-header-title">⚙ Admin Control Panel</div>
         <div className="ap-header-actions">
-          <button className="ap-ctrl-btn blue" onClick={() => adminAction("initialize", "Initialize")}>
+          <button className="ap-ctrl-btn blue" disabled={loading} onClick={() => adminAction("initialize", "Initialize")}>
             INITIALIZE
           </button>
-          <button className="ap-ctrl-btn green" onClick={() => setShowCreateModal(true)}>
+          <button className="ap-ctrl-btn green" disabled={loading} onClick={() => setShowCreateModal(true)}>
             + CREATE USER
           </button>
-          <button className="ap-ctrl-btn green" onClick={() => adminAction("start-game", "Game Started")}>
+          <button className="ap-ctrl-btn green" disabled={loading} onClick={() => adminAction("start-game", "Game Started")}>
             ▶ START GAME
           </button>
-          <button className="ap-ctrl-btn warn" onClick={() => adminAction("deactivate-game", "Deactivated")}>
+          <button className="ap-ctrl-btn warn" disabled={loading} onClick={() => adminAction("deactivate-game", "Deactivated")}>
             ⏸ DEACTIVATE
           </button>
-          <button className="ap-ctrl-btn warn" onClick={() => adminAction("reset-timer", "Timer Reset")}>
+          <button className="ap-ctrl-btn warn" disabled={loading} onClick={() => adminAction("reset-timer", "Timer Reset")}>
             ↺ RESET TIMER
           </button>
-          <button className="ap-ctrl-btn warn" 
+          <button className="ap-ctrl-btn warn" disabled={loading}
             onClick={() => {
-                if (window.confirm("Reset ALL team progress? This cannot be undone.")) {
+              if (window.confirm("Reset ALL team progress? This cannot be undone.")) {
                 adminAction("reset-game", "Game Reset");
-                }
+              }
             }}
-            >
+          >
             ⟳ RESET GAME
-            </button>
-            <button className="ap-ctrl-btn red" 
+          </button>
+          <button className="ap-ctrl-btn red" disabled={loading}
             onClick={() => {
-                if (window.confirm("DELETE EVERYTHING from the database? This cannot be undone.")) {
+              if (window.confirm("DELETE EVERYTHING from the database? This cannot be undone.")) {
                 adminAction("delete-everything", "DB Wiped");
-                }
+              }
             }}
-            >
+          >
             🗑 DELETE ALL
-            </button>
-          <button className="ap-ctrl-btn red" onClick={() => adminAction("end-game", "Game Ended")}>
+          </button>
+          <button className="ap-ctrl-btn red" disabled={loading} onClick={() => {
+            if (window.confirm("End game? All players will be redirected to Success or Failure page.")) {
+              adminAction("end-game", "Game Ended");
+            }
+          }}>
             ■ END GAME
           </button>
-          
+
           <button className="ap-ctrl-btn blue" onClick={() => navigate("/leaderboard")}>
             ◈ BOARD
           </button>
