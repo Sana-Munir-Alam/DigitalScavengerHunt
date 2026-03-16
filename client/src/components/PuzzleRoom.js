@@ -84,8 +84,7 @@ function ClueModal({ clue, puzzleName, onClose }) {
           {clue}
         </div>
         <button
-          className="pr-modal-submit"
-          style={{ borderColor: "var(--pr-secondary)", color: "var(--pr-secondary)" }}
+          className="pr-modal-submit green-variant"
           onClick={onClose}
         >
           <span>ACKNOWLEDGED</span>

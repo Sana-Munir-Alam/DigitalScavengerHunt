@@ -1,13 +1,14 @@
 /* LoadingPage2.css */
 :root {
-  --lp2-bg: #000d08;
-  --lp2-primary: #00ff88;
-  --lp2-blue: #00e5ff;
-  --lp2-accent: #aaff00;
-  --lp2-text: #b0f0d0;
-  --lp2-border: rgba(0, 255, 136, 0.3);
+  --lp2-bg: #000508;
+  --lp2-primary: #00e5ff;
+  --lp2-orange: #ff5500;
+  --lp2-amber: #ffaa00;
+  --lp2-accent: #00aaff;
+  --lp2-text: #c0ddf0;
+  --lp2-border: rgba(0, 229, 255, 0.3);
   --lp2-font: "Courier New", Courier, monospace;
-  --lp2-glow: 0 0 20px rgba(0, 255, 136, 0.5);
+  --lp2-glow: 0 0 20px rgba(0, 229, 255, 0.5);
 }
 
 @keyframes lp2-code-scroll {
@@ -63,10 +64,10 @@
 
 /* LEFT PANEL - Code Waterfall */
 .lp2-code-panel {
-  border-right: 1px solid var(--lp2-border);
+  border-right: 1px solid rgba(255,85,0,0.25);
   overflow: hidden;
   position: relative;
-  background: rgba(0,255,136,0.02);
+  background: rgba(255,60,0,0.04);
 }
 
 .lp2-code-scroll {
@@ -76,19 +77,19 @@
 
 .lp2-code-line {
   font-size: 10px;
-  color: rgba(0,255,136,0.5);
+  color: rgba(255,120,40,0.5);
   line-height: 1.7;
   white-space: nowrap;
   overflow: hidden;
 }
 
 .lp2-code-line.highlight {
-  color: var(--lp2-primary);
-  text-shadow: 0 0 6px rgba(0,255,136,0.5);
+  color: var(--lp2-orange);
+  text-shadow: 0 0 6px rgba(255,85,0,0.5);
 }
 
-.lp2-code-line.blue { color: rgba(0,229,255,0.6); }
-.lp2-code-line.dim { color: rgba(0,255,136,0.2); }
+.lp2-code-line.blue { color: rgba(0,229,255,0.5); }
+.lp2-code-line.dim { color: rgba(255,100,30,0.2); }
 
 /* RIGHT PANEL - Main content */
 .lp2-main {
@@ -119,7 +120,7 @@
 .lp2-title-sub {
   font-size: 12px;
   letter-spacing: 4px;
-  color: rgba(0,255,136,0.5);
+  color: rgba(0,229,255,0.5);
   display: block;
   margin-top: 8px;
 }
@@ -155,7 +156,7 @@
   animation: lp2-ping 1.5s ease-out infinite;
 }
 
-.lp2-ping-ring:nth-child(2) { animation-delay: 0.5s; }
+.lp2-ping-ring:nth-child(2) { animation-delay: 0.5s; border-color: var(--lp2-orange); }
 .lp2-ping-ring:nth-child(3) { animation-delay: 1s; }
 
 /* Status items */
@@ -189,7 +190,7 @@
 }
 
 .lp2-status-dot.pending {
-  background: rgba(0,255,136,0.3);
+  background: rgba(0,229,255,0.2);
   box-shadow: none;
   animation: lp2-blink 0.8s infinite;
 }
@@ -204,7 +205,7 @@
 
 .lp2-status-tick {
   font-size: 13px;
-  color: var(--lp2-primary);
+  color: var(--lp2-orange);
 }
 
 /* Progress bars */
@@ -222,21 +223,21 @@
   justify-content: space-between;
   font-size: 10px;
   letter-spacing: 2px;
-  color: rgba(0,255,136,0.6);
+  color: rgba(255,85,0,0.6);
   text-transform: uppercase;
 }
 
 .lp2-progress-track {
   height: 4px;
-  background: rgba(0,255,136,0.1);
+  background: rgba(0,229,255,0.08);
   border: 1px solid var(--lp2-border);
   overflow: hidden;
 }
 
 .lp2-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--lp2-primary), var(--lp2-accent));
-  box-shadow: 0 0 8px var(--lp2-primary);
+  background: linear-gradient(90deg, var(--lp2-orange), var(--lp2-primary));
+  box-shadow: 0 0 8px rgba(255,85,0,0.5);
   animation: lp2-bar-fill var(--duration, 2s) ease forwards;
   animation-delay: var(--delay, 0s);
   width: 0%;

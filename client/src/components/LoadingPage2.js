@@ -107,7 +107,7 @@ export default function LoadingPage2() {
         {/* Circuit animation */}
         <div className="lp2-circuit-wrap">
           <svg className="lp2-circuit-svg" viewBox="0 0 200 200">
-            <g fill="none" stroke="#00ff88" strokeWidth="1.5">
+            <g fill="none" stroke="#ff5500" strokeWidth="1.5">
               <rect x="80" y="80" width="40" height="40" />
               <line x1="100" y1="20" x2="100" y2="80" />
               <line x1="180" y1="100" x2="140" y2="100" />
@@ -119,10 +119,10 @@ export default function LoadingPage2() {
               <line x1="100" y1="20" x2="140" y2="20" />
               <line x1="140" y1="20" x2="180" y2="60" />
               <line x1="180" y1="60" x2="180" y2="100" />
-              <circle cx="100" cy="20" r="4" fill="#00ff88" />
-              <circle cx="180" cy="100" r="4" fill="#00ff88" />
-              <circle cx="100" cy="180" r="4" fill="#00ff88" />
-              <circle cx="20" cy="100" r="4" fill="#00ff88" />
+              <circle cx="100" cy="20" r="4" fill="#ff5500" />
+              <circle cx="180" cy="100" r="4" fill="#ff5500" />
+              <circle cx="100" cy="180" r="4" fill="#ff5500" />
+              <circle cx="20" cy="100" r="4" fill="#ff5500" />
               <circle cx="60" cy="20" r="3" fill="none" stroke="#00e5ff" />
               <circle cx="140" cy="20" r="3" fill="none" stroke="#00e5ff" />
             </g>

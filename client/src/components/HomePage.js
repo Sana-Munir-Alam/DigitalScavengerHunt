@@ -63,7 +63,7 @@ export default function HomePage() {
       setTimeRemaining((t) => {
         if (t <= 1) {
           clearInterval(timer);
-          navigate("/failure");
+          navigate("/home");
           return 0;
         }
         return t - 1;
@@ -136,12 +136,9 @@ export default function HomePage() {
             )}
           </div>
           <span className="hp-timer-status">
-            {gameStarted && gameActive
-              ? "COUNTDOWN ACTIVE"
-              : gameStarted && !gameActive
-              ? "MISSION PAUSED BY ADMIN"
-              : gameStartEnabled
-              ? "READY — AWAITING START"
+            {gameStarted && gameActive ? "COUNTDOWN ACTIVE"
+              : gameStarted && !gameActive ? "MISSION PAUSED BY ADMIN"
+              : gameStartEnabled ? "READY — AWAITING START"
               : "PENDING ADMIN ACTIVATION"}
           </span>
         </div>
@@ -154,15 +151,11 @@ export default function HomePage() {
               disabled={!canEnterMission}
               style={!canEnterMission ? { opacity: 0.4, cursor: "not-allowed" } : {}}
             >
-              {canEnterMission ? "▶ ENTER MISSION" : "⏸ MISSION PAUSED"}
+              <span>{canEnterMission ? "▶ ENTER MISSION" : "⏸ MISSION PAUSED"}</span>
             </button>
           ) : (
-            <button
-              className="hp-btn-primary"
-              onClick={handleStartGame}
-              disabled={!canStartGame || loading}
-            >
-              {loading ? "INITIALIZING..." : "▶ START GAME"}
+            <button className="hp-btn-primary" onClick={handleStartGame} disabled={!canStartGame || loading}>
+              <span>{loading ? "INITIALIZING..." : "▶ START GAME"}</span>
             </button>
           )}
           <button className="hp-btn-secondary" onClick={() => navigate("/leaderboard")}>
@@ -173,12 +166,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="hp-footer">
-        <a
-          className="hp-rulebook-btn"
-          href="/DSH_Rulebook.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a className="hp-rulebook-btn" href="/DSH_Rulebook.pdf" target="_blank" rel="noopener noreferrer">
           📋 RULEBOOK
         </a>
       </footer>
