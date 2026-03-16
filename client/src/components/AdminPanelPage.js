@@ -34,7 +34,7 @@ function TeamCard({ user, index }) {
 
   // Boss timing
   const bossTime = user.BossCompleteTime || null;
-  const trailTime = user.BossStartTime || null; // time when boss was first accessed
+  const trailTime = user.BossStartTime || null;
 
   return (
     <div
@@ -235,10 +235,27 @@ export default function AdminPanelPage() {
     navigate("/login");
   };
 
-  // Group by trail
-  const redTeams = users.filter((u) => u.TrailType === "Red");
-  const greenTeams = users.filter((u) => u.TrailType === "Green");
-  const blueTeams = users.filter((u) => u.TrailType === "Blue");
+  // Sort users by: 1) TotalScore desc, 2) puzzles solved desc, 3) FinalSubmissionTime asc
+  function sortUsers(arr) {
+    return [...arr].sort((a, b) => {
+      if (b.TotalScore !== a.TotalScore) return b.TotalScore - a.TotalScore;
+      const aSolved = (a.TechPuzzleStatusArray || []).filter(s => s === 2).length
+                    + (a.PhysicalPuzzleStatus || []).filter(s => s === 2).length;
+      const bSolved = (b.TechPuzzleStatusArray || []).filter(s => s === 2).length
+                    + (b.PhysicalPuzzleStatus || []).filter(s => s === 2).length;
+      if (bSolved !== aSolved) return bSolved - aSolved;
+      if (a.FinalSubmissionTime != null && b.FinalSubmissionTime != null)
+        return a.FinalSubmissionTime - b.FinalSubmissionTime;
+      if (a.FinalSubmissionTime != null) return -1;
+      if (b.FinalSubmissionTime != null) return 1;
+      return 0;
+    });
+  }
+
+  // Group by trail — each group sorted individually by the same criteria
+  const redTeams   = sortUsers(users.filter((u) => u.TrailType === "Red"));
+  const greenTeams = sortUsers(users.filter((u) => u.TrailType === "Green"));
+  const blueTeams  = sortUsers(users.filter((u) => u.TrailType === "Blue"));
 
   return (
     <div className="ap-page">

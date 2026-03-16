@@ -106,8 +106,8 @@ export default function LoginPage() {
 
           {error && <div className="lp-error">⚠ {error}</div>}
 
-          <button className="lp-btn" type="submit" disabled={loading}>
-            {loading ? "AUTHENTICATING..." : "AUTHORIZE ACCESS"}
+           <button className="lp-btn" type="submit" disabled={loading}>
+            <span>{loading ? "AUTHENTICATING..." : "AUTHORIZE ACCESS"}</span>
           </button>
         </form>
       </div>
