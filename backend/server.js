@@ -123,6 +123,14 @@ async function getFlags(trailType) {
 }
 
 // ─────────────────────────────────────────────
+// API TESTING ROUTE
+// ─────────────────────────────────────────────
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'Digital Scavenger Hunt API is running!' });
+});
+
+// ─────────────────────────────────────────────
 // INITIALIZATION ROUTE (seed DB)
 // ─────────────────────────────────────────────
 app.post("/api/admin/initialize", async (req, res) => {
