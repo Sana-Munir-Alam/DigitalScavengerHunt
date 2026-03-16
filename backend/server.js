@@ -156,11 +156,11 @@ app.post("/api/admin/initialize", async (req, res) => {
       { PuzzleName: "Vanished Route", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 6, Description: "A recovered internal document points investigators toward a public identity connected to the missing developer. What first appears to be an ordinary file quickly expands into a wider digital trail involving a public profile, a travel clue, and one final residential lead. Teams must inspect the recovered files carefully, follow the public footprint step by step, decode the fragments they uncover, and reconstruct the next key.", Link: "https://drive.google.com/drive/folders/1wpvaXZdR3v9yp7JtBwATjzVXgsI48_gq", Answer: "L4$T_KN0WN_TR4IL", Clue: "🔴L" },
       { PuzzleName: "Gateway Signal Reconstruction", TrailColor: "Red", TrailType: "Tech", PuzzleIndex: 7, Description: "The missing developer's last signal was split across two corrupted files: an image fragment and an audio dump. One hides data beneath the surface. The other reveals its secret only when the signal is visualized. Recover both hidden fragments and combine them to reconstruct the final transmission key.", Link: "https://drive.google.com/drive/folders/1Uwx_6Brs-9LN5gzG8HpM1jVToZWxKHVU", Answer: "SPECTRUM_SUPER_SECRET_MESSAGE", Clue: "🔴9" },
       // RED PHYSICAL
-      { PuzzleName: "The Maze", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 0, Description: "Find the board that displays the maze of the event venue. The shape it forms is the answer.", Link: "", Answer: "LABYRINTH", Clue: "🔴 Clue #RP1: The next physical clue is hidden near the main entrance pillar." },
-      { PuzzleName: "Direction Finder", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 1, Description: "A navigational tool always pointing north. Find the physical one hidden in your zone.", Link: "", Answer: "COMPASS", Clue: "🔴 Clue #RP2: Follow the red arrow markings on the floor to Room 3." },
-      { PuzzleName: "Zero Longitude", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 2, Description: "An imaginary line running through the poles. The longitude of zero degrees.", Link: "", Answer: "MERIDIAN", Clue: "🔴 Clue #RP3: The globe model in the library has a note attached." },
-      { PuzzleName: "Sky meets Earth", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 3, Description: "Where the sky meets the earth visually. Find the marked zone that represents this boundary.", Link: "", Answer: "HORIZON", Clue: "🔴 Clue #RP4: Look at the rooftop terrace — something is taped to the railing." },
-      { PuzzleName: "Blocked Sun", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 4, Description: "When the moon blocks the sun. A clue hidden in the astronomy exhibit.", Link: "", Answer: "ECLIPSE", Clue: "🔴 Clue #RP5: Congratulations! Proceed to the BOSS LEVEL using your collected clues." },
+      { PuzzleName: "The Maze", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 0, Description: "Find the board that displays the maze of the event venue. The shape it forms is the answer.", Link: "", Answer: "LABYRINTH", Clue: "🔴 K" },
+      { PuzzleName: "Direction Finder", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 1, Description: "A navigational tool always pointing north. Find the physical one hidden in your zone.", Link: "", Answer: "COMPASS", Clue: "🔴 2" },
+      { PuzzleName: "Zero Longitude", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 2, Description: "An imaginary line running through the poles. The longitude of zero degrees.", Link: "", Answer: "MERIDIAN", Clue: "🔴 D" },
+      { PuzzleName: "Sky meets Earth", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 3, Description: "Where the sky meets the earth visually. Find the marked zone that represents this boundary.", Link: "", Answer: "HORIZON", Clue: "🔴 8" },
+      { PuzzleName: "Blocked Sun", TrailColor: "Red", TrailType: "Physical", PuzzleIndex: 4, Description: "When the moon blocks the sun. A clue hidden in the astronomy exhibit.", Link: "", Answer: "ECLIPSE", Clue: "🔴 Q" },
       // GREEN TECH
       { PuzzleName: "Binary World", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 0, Description: "The base-2 numeral system using only 0s and 1s. The language of all computers.", Link: "", Answer: "BINARY", Clue: "🟢 Clue #GT1: The binary poster near the elevator decodes to your next location." },
       { PuzzleName: "OS Core", TrailColor: "Green", TrailType: "Tech", PuzzleIndex: 1, Description: "The core of the operating system. It manages communication between hardware and software.", Link: "", Answer: "KERNEL", Clue: "🟢 Clue #GT2: Check the terminal at Station 3 — run `ls -la /clues`." },
@@ -197,10 +197,10 @@ app.post("/api/admin/initialize", async (req, res) => {
     // Seed flags
     await Flag.deleteMany({});
     await Flag.create({
-      Trail1TechFlagString: "R3V7X4L9K2D8Q",
+      Trail1TechFlagString: "R3V7X4L9",
       Trail2TechFlagString: "GR33N_T3CH_FL4",
       Trail3TechFlagString: "BLU3_T3CH_FL4G",
-      Trail1PhysicalFlagString: "R3D_PHY_FL4G_1",
+      Trail1PhysicalFlagString: "K2D8Q",
       Trail2PhysicalFlagString: "GRN_PHY_FL4G_2",
       Trail3PhysicalFlagString: "BLU_PHY_FL4G_3",
     });
