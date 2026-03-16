@@ -412,7 +412,28 @@ app.get("/api/admin/users", async (req, res) => {
 
   try {
     const users = await User.find({}, { Password: 0 });
-    res.json(users);
+
+    // Sort: 1) TotalScore desc, 2) puzzles solved desc, 3) FinalSubmissionTime asc (earlier = better)
+    const sorted = users.sort((a, b) => {
+      // 1. Score — higher is better
+      if (b.TotalScore !== a.TotalScore) return b.TotalScore - a.TotalScore;
+
+      // 2. Total puzzles solved — higher is better
+      const aSolved = a.TechPuzzleStatusArray.filter(s => s === 2).length
+                    + a.PhysicalPuzzleStatus.filter(s => s === 2).length;
+      const bSolved = b.TechPuzzleStatusArray.filter(s => s === 2).length
+                    + b.PhysicalPuzzleStatus.filter(s => s === 2).length;
+      if (bSolved !== aSolved) return bSolved - aSolved;
+
+      // 3. Final submission time — earlier is better (null = not submitted, goes last)
+      if (a.FinalSubmissionTime !== null && b.FinalSubmissionTime !== null)
+        return a.FinalSubmissionTime - b.FinalSubmissionTime;
+      if (a.FinalSubmissionTime !== null) return -1;
+      if (b.FinalSubmissionTime !== null) return 1;
+      return 0;
+    });
+
+    res.json(sorted);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
