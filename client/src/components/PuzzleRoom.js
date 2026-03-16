@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/PuzzleRoom.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const TECH_CODES = [
   "T1-001","T1-002","T1-003","T1-004",
   "T1-005","T1-006","T1-007","T1-008",
@@ -161,7 +163,7 @@ function BossFlagModal({ onClose, onSuccess }) {
 
   const handleSubmit = async () => {
     try {
-      const res = await axios.post("/api/boss/verify-flag", { teamName, flagInput: flag });
+      const res = await axios.post(`${API_URL}/api/boss/verify-flag`, { teamName, flagInput: flag });
       if (res.data.success) {
         onSuccess();
       } else {
@@ -228,9 +230,9 @@ export default function PuzzleRoom() {
   const fetchData = useCallback(async () => {
     try {
       const [userRes, puzzleRes] = await Promise.all([
-        axios.get(`/api/user/${teamName}`),
+        axios.get(`${API_URL}/api/user/${teamName}`),
         puzzleData.tech.length === 0
-          ? axios.get(`/api/puzzles/${trailType}`)
+          ? axios.get(`${API_URL}/api/puzzles/${trailType}`)
           : Promise.resolve(null),
       ]);
       const data = userRes.data;
@@ -333,7 +335,7 @@ export default function PuzzleRoom() {
       const endpoint = type === "tech"
         ? "/api/puzzle/tech/retry"
         : "/api/puzzle/physical/retry";
-      await axios.post(endpoint, { teamName, puzzleIndex: index });
+      await axios.post(`${API_URL}${endpoint}`, { teamName, puzzleIndex: index });
       await fetchData();
       const puzzles = type === "tech" ? puzzleData.tech : puzzleData.physical;
       const puzzle = puzzles[index];
@@ -361,7 +363,7 @@ export default function PuzzleRoom() {
       : "/api/puzzle/physical/submit";
 
     try {
-      const res = await axios.post(endpoint, {
+      const res = await axios.post(`${API_URL}${endpoint}`, {
         teamName,
         puzzleIndex: activePuzzle.index,
         answer,

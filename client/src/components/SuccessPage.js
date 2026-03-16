@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/SuccessPage.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const COLORS = ["#00ff88", "#00e5ff", "#ffaa00", "#ff4466", "#aaff00"];
 
 function Confetti() {
@@ -58,7 +60,7 @@ export default function SuccessPage() {
 
   useEffect(() => {
     if (!teamName) { navigate("/login"); return; }
-    axios.get(`/api/user/${teamName}`).then((res) => setUserData(res.data)).catch(() => {});
+    axios.get(`${API_URL}/api/user/${teamName}`).then((res) => setUserData(res.data)).catch(() => {});
   }, [teamName, navigate]);
 
   return (

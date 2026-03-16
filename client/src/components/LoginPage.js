@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/LoginPage.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState("participant");
@@ -18,7 +20,7 @@ export default function LoginPage() {
 
     try {
       if (userType === "admin") {
-        const res = await axios.post("/api/admin/login", {
+        const res = await axios.post(`${API_URL}/api/admin/login`, {
           username: teamName,
           password,
         });
@@ -29,7 +31,7 @@ export default function LoginPage() {
           navigate("/loading", { state: { role: "admin" } });
         }
       } else {
-        const res = await axios.post("/api/login", { teamName, password });
+        const res = await axios.post(`${API_URL}/api/login`, { teamName, password });
         if (res.data.success) {
           sessionStorage.setItem("role", "participant");
           sessionStorage.setItem("teamName", res.data.teamName);

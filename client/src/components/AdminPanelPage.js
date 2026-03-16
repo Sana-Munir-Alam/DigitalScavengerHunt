@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/AdminPanelPage.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function indicatorClass(status) {
   if (status === 0) return "locked";
   if (status === 1) return "unlocked";
@@ -120,7 +122,7 @@ function CreateUserModal({ adminUser, adminPass, onClose, onSuccess }) {
     }
     setLoading(true);
     try {
-      await axios.post("/api/admin/create-user", {
+      await axios.post(`${API_URL}/api/admin/create-user`, {
         username: adminUser,
         password: adminPass,
         teamName,
@@ -201,7 +203,7 @@ export default function AdminPanelPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await axios.get(`/api/admin/users?username=${adminUser}&password=${adminPass}`);
+      const res = await axios.get(`${API_URL}/api/admin/users?username=${adminUser}&password=${adminPass}`);
       setUsers(res.data);
     } catch (err) {
       console.error(err);
@@ -219,7 +221,7 @@ export default function AdminPanelPage() {
     setLoading(true);
     setStatusMsg("");
     try {
-      await axios.post(`/api/admin/${endpoint}`, { username: adminUser, password: adminPass });
+      await axios.post(`${API_URL}/api/admin/${endpoint}`, { username: adminUser, password: adminPass });
       setStatusMsg(`✓ ${label} — success`);
       fetchUsers();
     } catch (err) {

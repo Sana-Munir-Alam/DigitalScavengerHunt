@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/HomePage.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function formatTime(seconds) {
   if (seconds <= 0) return "00:00:00";
   const h = Math.floor(seconds / 3600);
@@ -24,7 +26,7 @@ export default function HomePage() {
 
   const fetchUserData = useCallback(async () => {
     try {
-      const res = await axios.get(`/api/user/${teamName}`);
+      const res = await axios.get(`${API_URL}/api/user/${teamName}`);
       const data = res.data;
       setGameStartEnabled(data.GameStartStatus);
       setGameActive(data.gameActive);
@@ -75,7 +77,7 @@ export default function HomePage() {
   const handleStartGame = async () => {
     setLoading(true);
     try {
-      await axios.post("/api/user/start-game", { teamName });
+      await axios.post(`${API_URL}/api/user/start-game`, { teamName });
       setGameStarted(true);
     } catch (err) {
       alert(err.response?.data?.message || "Cannot start game");

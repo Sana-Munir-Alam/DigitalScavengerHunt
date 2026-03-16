@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/BossLevel.css";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export default function BossLevel() {
   const navigate = useNavigate();
   const teamName = sessionStorage.getItem("teamName");
@@ -18,7 +20,7 @@ export default function BossLevel() {
     if (!teamName) navigate("/login");
     // Fetch boss description from DB
     if (trailType) {
-      axios.get(`/api/boss/description/${trailType}`)
+      axios.get(`${API_URL}/api/boss/description/${trailType}`)
         .then((res) => setDescription(res.data.description || "No briefing available."))
         .catch(() => setDescription("Unable to load mission briefing."));
     }
@@ -48,7 +50,7 @@ export default function BossLevel() {
     if (!answer.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post("/api/boss/submit", { teamName, answer });
+      const res = await axios.post(`${API_URL}/api/boss/submit`, { teamName, answer });
       if (res.data.success) {
         setResult({ type: "correct", message: "✓ MISSION COMPLETE! Redirecting..." });
         setTimeout(() => navigate("/success"), 2000);
