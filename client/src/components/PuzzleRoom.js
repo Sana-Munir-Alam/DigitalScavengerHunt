@@ -182,7 +182,7 @@ function BossFlagModal({ onClose, onSuccess }) {
         <div className="pr-modal-code">Enter combined trail flag to proceed</div>
         <div className="pr-modal-desc" style={{ borderLeftColor: "var(--pr-accent)" }}>
           You must input the combined flag string collected throughout your trail.
-          The tech flag and physical flag concatenated together form the key.
+          The tech flag and physical flag concatenated together form the key. Eg: if your tech clue is "🟠7HW41P90" and physical clue is "🟠172NM", your combined flag would be "7HW41P90172NM". Enter the correct combined flag to access the Boss Level.
         </div>
         <div className="pr-modal-input-group">
           <label className="pr-modal-label">Combined Flag String</label>
@@ -438,7 +438,7 @@ export default function PuzzleRoom() {
         {/* TECH HUNT */}
         <div className="pr-section">
           <div className="pr-section-header">
-            <span className="pr-section-title">⚡ Tech Hunt</span>
+            <span className="pr-section-title">💻 Tech Hunt</span>
             <span className="pr-section-badge">8 PUZZLES</span>
             <span className="pr-section-badge">TRAIL: {trailType?.toUpperCase()}</span>
           </div>
