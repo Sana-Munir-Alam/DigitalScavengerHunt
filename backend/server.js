@@ -96,7 +96,7 @@ const gameStateSchema = new mongoose.Schema({
   GameActive: { type: Boolean, default: false },
   GameEnded: { type: Boolean, default: false },   // NEW: tracks if admin ended game
   GameStartTime: { type: Date, default: null },
-  GameDuration: { type: Number, default: 7200 }, // 2 hours in seconds
+  GameDuration: { type: Number, default: 10800 }, // 3 hours in seconds
 });
 
 const GameState = mongoose.model("GameState", gameStateSchema);
@@ -527,13 +527,13 @@ app.get("/api/user/:teamName", async (req, res) => {
 
     const gameState = await GameState.findOne();
     const now = Date.now();
-    let timeRemaining = 7200;
+    let timeRemaining = 10800;
 
     if (gameState && gameState.GameStartTime && gameState.GameActive) {
       const elapsed = Math.floor(
         (now - new Date(gameState.GameStartTime).getTime()) / 1000
       );
-      timeRemaining = Math.max(0, 7200 - elapsed);
+      timeRemaining = Math.max(0, 10800 - elapsed);
     }
 
     res.json({

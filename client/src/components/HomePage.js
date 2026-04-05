@@ -18,7 +18,7 @@ export default function HomePage() {
   const teamName = sessionStorage.getItem("teamName");
   const trailType = sessionStorage.getItem("trailType");
 
-  const [timeRemaining, setTimeRemaining] = useState(7200);
+  const [timeRemaining, setTimeRemaining] = useState(10800);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameStartEnabled, setGameStartEnabled] = useState(false);
   const [gameActive, setGameActive] = useState(false); // admin's GameActive flag
@@ -37,9 +37,9 @@ export default function HomePage() {
         setTimeRemaining(data.timeRemaining);
       } else {
         // Admin deactivated / reset-game / end-game / reset-timer:
-        // reset local state so timer shows 02:00:00 and stops ticking
+        // reset local state so timer shows 03:00:00 and stops ticking
         setGameStarted(false);
-        setTimeRemaining(7200);
+        setTimeRemaining(10800);
       }
 
       // If admin ended game — redirect all non-Home users

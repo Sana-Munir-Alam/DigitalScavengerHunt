@@ -218,7 +218,7 @@ export default function PuzzleRoom() {
 
   const [userData, setUserData] = useState(null);
   const [puzzleData, setPuzzleData] = useState({ tech: [], physical: [] });
-  const [timeRemaining, setTimeRemaining] = useState(7200);
+  const [timeRemaining, setTimeRemaining] = useState(10800);
   const [activePuzzle, setActivePuzzle] = useState(null);
   const [activeType, setActiveType] = useState(null);
   const [modalResult, setModalResult] = useState(null);
@@ -242,7 +242,7 @@ export default function PuzzleRoom() {
       if (data.gameActive) {
         setTimeRemaining(data.timeRemaining);
       } else {
-        setTimeRemaining(7200);
+        setTimeRemaining(10800);
       }
 
       if (puzzleRes) {
