@@ -1,4 +1,4 @@
-# Digital Scavenger Hunt
+# Digital Scavenger Hunt - Tech Quest [DevDay]
 
 A live competitive scavenger hunt platform with multi-trail puzzles, progressive unlocking, and a final boss challenge driven by real-time game control.
 
