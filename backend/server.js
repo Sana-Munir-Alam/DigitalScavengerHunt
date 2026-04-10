@@ -443,17 +443,18 @@ app.get("/api/admin/users", async (req, res) => {
   try {
     const users = await User.find({}, { Password: 0 });
 
-    // Sort: 1) TotalScore desc, 2) puzzles solved desc, 3) FinalSubmissionTime asc (earlier = better)
     const sorted = users.sort((a, b) => {
-      // 1. Score — higher is better
-      if (b.TotalScore !== a.TotalScore) return b.TotalScore - a.TotalScore;
-
-      // 2. Total puzzles solved — higher is better
+      // 1. Total puzzles solved (including boss) — higher is better
       const aSolved = a.TechPuzzleStatusArray.filter(s => s === 2).length
-                    + a.PhysicalPuzzleStatus.filter(s => s === 2).length;
+                    + a.PhysicalPuzzleStatus.filter(s => s === 2).length
+                    + (a.SafeStatus ? 1 : 0);
       const bSolved = b.TechPuzzleStatusArray.filter(s => s === 2).length
-                    + b.PhysicalPuzzleStatus.filter(s => s === 2).length;
+                    + b.PhysicalPuzzleStatus.filter(s => s === 2).length
+                    + (b.SafeStatus ? 1 : 0);
       if (bSolved !== aSolved) return bSolved - aSolved;
+
+      // 2. Score — higher is better
+      if (b.TotalScore !== a.TotalScore) return b.TotalScore - a.TotalScore;
 
       // 3. Final submission time — earlier is better (null = not submitted, goes last)
       if (a.FinalSubmissionTime !== null && b.FinalSubmissionTime !== null)
