@@ -1,5 +1,16 @@
-/* AdminPanelPage.css */
+/* AdminPanelPage.css — Dual World: Real x Upside Down */
 :root {
+  /* Real world — warm orange/amber (from HomePage) */
+  --real-fire: #ff5500;
+  --real-amber: #ffaa00;
+  --real-glow: rgba(255,85,0,0.5);
+  
+  /* Upside Down — cold electric blue (from HomePage) */
+  --upside-cyan: #00e5ff;
+  --upside-blue: #0055cc;
+  --upside-glow: rgba(0,229,255,0.5);
+  
+  /* Admin panel specific */
   --ap-bg: #00060e;
   --ap-surface: rgba(0,10,20,0.9);
   --ap-primary: #00e5ff;
@@ -10,9 +21,10 @@
   --ap-green-trail: #00ff88;
   --ap-blue-trail: #00e5ff;
   --ap-border: rgba(0,229,255,0.2);
-  --ap-text: #b0d8e8;
-  --ap-muted: rgba(176,216,232,0.5);
-  --ap-font: "Courier New", Courier, monospace;
+  --ap-text: #d0e8f0;
+  --ap-muted: rgba(200,230,245,0.5);
+  --ap-font: 'Share Tech Mono', 'Courier New', monospace;
+  --ap-font-display: 'Bebas Neue', 'Impact', sans-serif;
   --ap-glow: 0 0 20px rgba(0,229,255,0.4);
 
   --ap-locked: #606e76;
@@ -46,6 +58,12 @@
   50% { box-shadow: 0 0 20px rgba(0,229,255,0.5); }
 }
 
+@keyframes ap-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .ap-page {
   min-height: 100vh;
   background: var(--ap-bg);
@@ -54,16 +72,33 @@
   overflow-x: hidden;
 }
 
+/* Dual World Background Gradient - matching HomePage */
+.ap-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: 
+    /* Warm top glow - Real World */
+    radial-gradient(ellipse at 30% 30%, rgba(255, 81, 0, 0.163) 0%, rgba(255, 81, 0, 0.08) 40%, transparent 70%),
+    /* Cool bottom glow - Upside Down */
+    radial-gradient(ellipse at 60% 80%, rgba(0, 149, 255, 0.162) 0%, rgba(0, 149, 255, 0.08) 40%, transparent 70%),
+    /* Transition zone - orange/blue mixture */
+    radial-gradient(ellipse at 50% 50%, rgba(255, 85, 0, 0.08) 0%, rgba(0, 229, 255, 0.08) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Background grid - dual colored like HomePage */
 .ap-bg-grid {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255,85,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
   background-size: 40px 40px;
   animation: ap-grid 15s linear infinite;
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
 }
 
 /* Header */
@@ -74,45 +109,49 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 28px;
-  border-bottom: 1px solid var(--ap-border);
-  background: rgba(0,4,12,0.97);
+  padding: 18px 32px;
+  border-bottom: 1px solid rgba(0,229,255,0.15);
+  background: rgba(0,5,12,0.85);
   backdrop-filter: blur(12px);
   flex-wrap: wrap;
   gap: 12px;
 }
 
 .ap-header-title {
-  font-size: clamp(16px, 2.5vw, 24px);
-  font-weight: bold;
-  letter-spacing: 6px;
-  color: var(--ap-primary);
-  text-shadow: var(--ap-glow);
+  font-family: var(--ap-font-display);
+  font-size: clamp(20px, 3vw, 32px);
+  font-weight: normal;
+  letter-spacing: 8px;
+  color: #ffffff;
+  text-shadow:
+    0 0 30px rgba(255,255,255,0.2),
+    0 0 60px rgba(0,229,255,0.15);
   text-transform: uppercase;
 }
 
 .ap-header-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-/* Control Buttons */
+/* Control Buttons - larger font */
 .ap-ctrl-btn {
-  padding: 10px 18px;
+  padding: 12px 22px;
   background: transparent;
   font-family: var(--ap-font);
-  font-size: 12px;
-  letter-spacing: 2px;
+  font-size: 14px;
+  letter-spacing: 3px;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid;
   white-space: nowrap;
+  font-weight: bold;
 }
 
 .ap-ctrl-btn.green  { border-color: rgba(0,255,136,0.5); color: var(--ap-secondary); }
-.ap-ctrl-btn.green:hover  { background: rgba(0,255,136,0.1); box-shadow: 0 0 10px rgba(0,255,136,0.3); }
+.ap-ctrl-btn.green:hover  { background: rgba(0,255,136,0.1); box-shadow: 0 0 12px rgba(0,255,136,0.3); }
 
 .ap-ctrl-btn.red    { border-color: rgba(255,68,102,0.5); color: var(--ap-accent); }
 .ap-ctrl-btn.red:hover    { background: rgba(255,68,102,0.1); }
@@ -133,16 +172,17 @@
 .ap-content {
   position: relative;
   z-index: 5;
-  padding: 28px;
+  padding: 32px;
 }
 
 .ap-section-title {
-  font-size: 14px;
-  letter-spacing: 4px;
+  font-family: var(--ap-font);
+  font-size: 16px;
+  letter-spacing: 5px;
   color: var(--ap-muted);
   text-transform: uppercase;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--ap-border);
 }
 
@@ -150,100 +190,112 @@
 .ap-cards-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
+  gap: 20px;
 }
 
-/* Team Card */
+/* Team Card - larger padding and font */
 .ap-team-card {
   border: 1px solid var(--ap-border);
   background: var(--ap-surface);
-  padding: 18px 16px;
+  padding: 22px 20px;
   animation: ap-fade-in 0.4s ease both;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
-.ap-team-card:hover { transform: translateY(-2px); }
+.ap-team-card:hover { 
+  transform: translateY(-3px); 
+  box-shadow: 0 0 20px rgba(0,229,255,0.1);
+}
 
-.ap-team-card.Red-trail   { border-left: 3px solid var(--ap-red-trail); }
-.ap-team-card.Green-trail { border-left: 3px solid var(--ap-green-trail); }
-.ap-team-card.Blue-trail  { border-left: 3px solid var(--ap-blue-trail); }
+.ap-team-card.Red-trail   { border-left: 4px solid var(--ap-red-trail); }
+.ap-team-card.Green-trail { border-left: 4px solid var(--ap-green-trail); }
+.ap-team-card.Blue-trail  { border-left: 4px solid var(--ap-blue-trail); }
 
 .ap-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .ap-card-teamname {
-  font-size: 15px;
-  font-weight: bold;
+  font-family: var(--ap-font-display);
+  font-size: 20px;
+  font-weight: normal;
   color: var(--ap-primary);
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   word-break: break-all;
+  text-shadow: 0 0 10px rgba(0,229,255,0.2);
 }
 
 .ap-card-trail {
-  font-size: 10px;
-  letter-spacing: 1px;
-  padding: 2px 6px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 4px 8px;
   border-radius: 2px;
   flex-shrink: 0;
+  font-weight: bold;
 }
 .ap-card-trail.Red   { background: rgba(255,85,85,0.15); color: var(--ap-red-trail); border: 1px solid rgba(255,85,85,0.3); }
 .ap-card-trail.Green { background: rgba(0,255,136,0.1); color: var(--ap-green-trail); border: 1px solid rgba(0,255,136,0.3); }
 .ap-card-trail.Blue  { background: rgba(0,229,255,0.1); color: var(--ap-blue-trail); border: 1px solid rgba(0,229,255,0.3); }
 
 .ap-card-score {
-  font-size: 24px;
-  font-weight: bold;
+  font-family: var(--ap-font-display);
+  font-size: 32px;
+  font-weight: normal;
   color: var(--ap-secondary);
-  letter-spacing: 2px;
-  margin-bottom: 4px;
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+  text-shadow: 0 0 15px rgba(0,255,136,0.2);
 }
 
 .ap-card-submit {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ap-muted);
   letter-spacing: 1px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 /* Puzzle indicators */
 .ap-puzzle-section {
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .ap-puzzle-label {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   color: var(--ap-muted);
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   display: block;
 }
 
 .ap-indicators {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 8px;
 }
 
 .ap-indicator {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 11px;
+  font-weight: bold;
   letter-spacing: 0;
   font-family: var(--ap-font);
   flex-direction: column;
   line-height: 1;
   cursor: default;
-  transition: transform 0.1s;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.ap-indicator:hover {
+  transform: scale(1.05);
 }
 
 .ap-indicator.locked  { border-color: rgba(96,110,118,0.4); color: var(--ap-locked); background: rgba(96,110,118,0.05); }
@@ -251,11 +303,11 @@
 .ap-indicator.correct  { border-color: rgba(0,255,136,0.5); color: var(--ap-correct); background: rgba(0,255,136,0.08); }
 .ap-indicator.wrong    { border-color: rgba(255,68,102,0.5); color: var(--ap-wrong); background: rgba(255,68,102,0.08); }
 
-/* MODAL */
+/* MODAL - larger fonts */
 .ap-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.9);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -267,8 +319,8 @@
 .ap-modal {
   background: rgba(0,10,22,0.98);
   border: 1px solid var(--ap-border);
-  width: min(440px, 95vw);
-  padding: 36px;
+  width: min(480px, 95vw);
+  padding: 40px;
   position: relative;
   animation: ap-modal-in 0.3s ease;
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
@@ -276,33 +328,35 @@
 
 .ap-modal-close {
   position: absolute;
-  top: 14px; right: 14px;
+  top: 16px; right: 16px;
   background: transparent;
   border: 1px solid var(--ap-border);
   color: var(--ap-muted);
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
   transition: all 0.2s;
   display: flex; align-items: center; justify-content: center;
 }
 .ap-modal-close:hover { border-color: var(--ap-accent); color: var(--ap-accent); }
 
 .ap-modal-title {
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: 4px;
+  font-family: var(--ap-font-display);
+  font-size: 24px;
+  font-weight: normal;
+  letter-spacing: 5px;
   color: var(--ap-primary);
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   text-transform: uppercase;
+  text-shadow: 0 0 15px rgba(0,229,255,0.3);
 }
 
-.ap-form { display: flex; flex-direction: column; gap: 16px; }
+.ap-form { display: flex; flex-direction: column; gap: 20px; }
 
-.ap-form-field { display: flex; flex-direction: column; gap: 6px; }
+.ap-form-field { display: flex; flex-direction: column; gap: 8px; }
 
 .ap-form-label {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 3px;
   color: var(--ap-muted);
   text-transform: uppercase;
@@ -313,43 +367,44 @@
   border: 1px solid var(--ap-border);
   color: var(--ap-text);
   font-family: var(--ap-font);
-  font-size: 15px;
-  padding: 12px 14px;
+  font-size: 16px;
+  padding: 14px 16px;
   outline: none;
   transition: border-color 0.2s;
   text-transform: uppercase;
 }
-.ap-form-input:focus { border-color: var(--ap-primary); box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+.ap-form-input:focus { border-color: var(--ap-primary); box-shadow: 0 0 12px rgba(0,229,255,0.2); }
 
 .ap-form-select {
   background: rgba(0,229,255,0.04);
   border: 1px solid var(--ap-border);
   color: var(--ap-text);
   font-family: var(--ap-font);
-  font-size: 14px;
-  padding: 12px 14px;
+  font-size: 15px;
+  padding: 14px 16px;
   outline: none;
   cursor: pointer;
 }
 .ap-form-select option { background: #000d20; }
 
 .ap-form-submit {
-  padding: 14px;
+  padding: 16px;
   background: transparent;
   border: 1px solid var(--ap-primary);
   color: var(--ap-primary);
   font-family: var(--ap-font);
-  font-size: 13px;
-  letter-spacing: 3px;
+  font-size: 14px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
+  margin-top: 8px;
 }
-.ap-form-submit:hover { background: var(--ap-primary); color: #000; }
+.ap-form-submit:hover { background: var(--ap-primary); color: #000; box-shadow: 0 0 20px rgba(0,229,255,0.3); }
 
 .ap-form-result {
-  padding: 10px;
-  font-size: 13px;
+  padding: 12px;
+  font-size: 14px;
   letter-spacing: 2px;
   text-align: center;
 }
@@ -364,12 +419,21 @@
   .ap-cards-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 786px) {
-  .ap-cards-grid { grid-template-columns: repeat(2, 1fr); }
-  .ap-content { padding: 18px; }
+  .ap-cards-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+  .ap-content { padding: 20px; }
+  .ap-header { padding: 14px 20px; }
+  .ap-card-teamname { font-size: 18px; }
+  .ap-card-score { font-size: 28px; }
+  .ap-indicator { width: 32px; height: 32px; font-size: 10px; }
 }
 @media (max-width: 425px) {
-  .ap-cards-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .ap-header { padding: 10px 14px; }
-  .ap-header-actions { gap: 6px; }
-  .ap-ctrl-btn { padding: 8px 10px; font-size: 9px; }
+  .ap-cards-grid { grid-template-columns: 1fr; gap: 12px; }
+  .ap-header { padding: 12px 16px; flex-direction: column; text-align: center; }
+  .ap-header-actions { gap: 8px; justify-content: center; }
+  .ap-ctrl-btn { padding: 10px 16px; font-size: 11px; letter-spacing: 2px; }
+  .ap-section-title { font-size: 14px; letter-spacing: 3px; }
+  .ap-card-teamname { font-size: 16px; }
+  .ap-card-score { font-size: 26px; }
+  .ap-modal { padding: 28px 20px; }
+  .ap-modal-title { font-size: 20px; letter-spacing: 3px; }
 }
