@@ -143,7 +143,6 @@ function PuzzleModal({ puzzle, onClose, onSubmit, result }) {
               <span>SUBMIT ANSWER</span>
             </button>
           </>
-          
 
         {result && (
           <div className={`pr-modal-result ${result.type === "correct" ? "correct-res" : "wrong-res"}`}>
@@ -196,9 +195,9 @@ function BossFlagModal({ onClose, onSuccess }) {
             autoComplete="off"
           />
         </div>
+        {/* Red fill hover variant for boss flag verify button */}
         <button
-          className="pr-modal-submit"
-          style={{ borderColor: "var(--pr-accent)", color: "var(--pr-accent)" }}
+          className="pr-modal-submit pr-modal-submit--red"
           onClick={handleSubmit}
         >
           <span>VERIFY FLAG</span>
@@ -224,8 +223,7 @@ export default function PuzzleRoom() {
   const [modalResult, setModalResult] = useState(null);
   const [toast, setToast] = useState(null);
   const [showBossModal, setShowBossModal] = useState(false);
-  // Clue popup state
-  const [cluePopup, setCluePopup] = useState(null); // { clue, puzzleName }
+  const [cluePopup, setCluePopup] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -238,7 +236,6 @@ export default function PuzzleRoom() {
       const data = userRes.data;
       setUserData(data);
 
-      // Only update timer from server when game is active; reset when not
       if (data.gameActive) {
         setTimeRemaining(data.timeRemaining);
       } else {
@@ -249,7 +246,6 @@ export default function PuzzleRoom() {
         setPuzzleData(puzzleRes.data);
       }
 
-      // Handle game ended by admin — redirect to success or failure
       if (data.gameEnded) {
         if (data.SafeStatus) {
           navigate("/success");
@@ -270,8 +266,6 @@ export default function PuzzleRoom() {
     return () => clearInterval(poll);
   }, [teamName, navigate, fetchData]);
 
-  // Live countdown — only runs when game is active.
-  // Clears automatically when gameActive flips false (deactivate/reset/end).
   const gameActive = userData?.gameActive ?? true;
   useEffect(() => {
     if (!gameActive) return;
@@ -300,19 +294,17 @@ export default function PuzzleRoom() {
 
     if (!statusArr) return;
     const status = statusArr[index];
-    if (status === 0) return; // locked
+    if (status === 0) return;
 
     const puzzles = type === "tech" ? puzzleData.tech : puzzleData.physical;
     const puzzle = puzzles[index];
     const code = type === "tech" ? TECH_CODES[index] : PHY_CODES[index];
 
-    // If already solved — show the clue popup instead of answer form
     if (status === 2) {
       setCluePopup({ clue: puzzle?.Clue || "—", puzzleName: puzzle?.PuzzleName || code });
       return;
     }
 
-    // If wrong status, retry first
     if (status === 3) {
       handleRetry(index, type);
       return;
@@ -373,7 +365,6 @@ export default function PuzzleRoom() {
         await fetchData();
         setActivePuzzle(null);
         setModalResult(null);
-        // Show the clue popup
         const puzzles = activeType === "tech" ? puzzleData.tech : puzzleData.physical;
         const puzzle = puzzles[activePuzzle.index];
         setCluePopup({
@@ -404,7 +395,6 @@ export default function PuzzleRoom() {
   const physTimes = userData?.PhysicalPuzzleTime || Array(5).fill(0);
   const scavengerUnlocked = physStatuses.some((s) => s >= 1);
 
-  // Boss button counter: all 13 puzzles must be solved (8 tech + 5 physical)
   const techSolved = techStatuses.filter((s) => s === 2).length;
   const physSolved = physStatuses.filter((s) => s === 2).length;
   const totalSolved = techSolved + physSolved;
@@ -506,7 +496,7 @@ export default function PuzzleRoom() {
         </div>
       </div>
 
-      {/* Puzzle Modal (description + answer) */}
+      {/* Puzzle Modal */}
       {activePuzzle && (
         <PuzzleModal
           puzzle={activePuzzle}
@@ -516,7 +506,7 @@ export default function PuzzleRoom() {
         />
       )}
 
-      {/* Clue Popup (after correct answer or clicking solved puzzle) */}
+      {/* Clue Popup */}
       {cluePopup && (
         <ClueModal
           clue={cluePopup.clue}

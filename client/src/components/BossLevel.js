@@ -5,6 +5,19 @@ import "../styles/BossLevel.css";
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+const BOSS_LINK = "https://boss-level.onrender.com/";
+
+function splitDescription(raw) {
+  // Split on "SYSTEM NOTICE:" to separate main description from system message
+  const marker = "SYSTEM NOTICE:";
+  const idx = raw.indexOf(marker);
+  if (idx === -1) return { main: raw, system: null };
+  return {
+    main: raw.slice(0, idx).trim(),
+    system: raw.slice(idx).trim(),
+  };
+}
+
 export default function BossLevel() {
   const navigate = useNavigate();
   const teamName = sessionStorage.getItem("teamName");
@@ -14,19 +27,18 @@ export default function BossLevel() {
   const [result, setResult] = useState(null);
   const [penalty, setPenalty] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [description, setDescription] = useState("Loading mission briefing...");
+  const [rawDescription, setRawDescription] = useState("Loading mission briefing...");
 
   useEffect(() => {
     if (!teamName) navigate("/login");
-    // Fetch boss description from DB
     if (trailType) {
       axios.get(`${API_URL}/api/boss/description/${trailType}`)
-        .then((res) => setDescription(res.data.description || "No briefing available."))
-        .catch(() => setDescription("Unable to load mission briefing."));
+        .then((res) => setRawDescription(res.data.description || "No briefing available."))
+        .catch(() => setRawDescription("Unable to load mission briefing."));
     }
   }, [teamName, trailType, navigate]);
 
-  // Poll for game-ended status — redirect if admin ends game while on boss level
+  // Poll for game-ended status
   useEffect(() => {
     const poll = setInterval(async () => {
       try {
@@ -65,6 +77,8 @@ export default function BossLevel() {
     }
   };
 
+  const { main, system } = splitDescription(rawDescription);
+
   return (
     <div className="bl-page">
       <div className="bl-grid-bg" />
@@ -86,7 +100,29 @@ export default function BossLevel() {
 
         <div className="bl-puzzle-box">
           <span className="bl-puzzle-label">Mission Briefing</span>
-          <div className="bl-puzzle-desc">{description}</div>
+
+          {/* Main description block */}
+          <div className="bl-puzzle-desc">{main}</div>
+
+          {/* System notice block — only shown if present */}
+          {system && (
+            <div className="bl-system-notice">
+              <div className="bl-system-notice-label">⚠ SYSTEM NOTICE</div>
+              <div className="bl-system-notice-text">
+                {system.replace(/^SYSTEM NOTICE:\s*/i, "")}
+              </div>
+            </div>
+          )}
+
+          {/* Boss puzzle link */}
+          <a
+            href={BOSS_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bl-puzzle-link"
+          >
+            ⚡ Open Boss Level Terminal
+          </a>
 
           <div className="bl-form">
             <label className="bl-input-label">Final Answer</label>
