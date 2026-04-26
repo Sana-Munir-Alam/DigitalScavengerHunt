@@ -230,7 +230,7 @@ app.post("/api/admin/initialize", async (req, res) => {
     // Reset all existing users' puzzle status arrays to initial state
     await User.updateMany({}, {
       $set: {
-        TechPuzzleStatusArray: [0, 0, 0, 0, 0, 0, 0, 0],
+        TechPuzzleStatusArray: [1, 0, 0, 0, 0, 0, 0, 0],
         TechPuzzleArray: Array(8).fill(""),
         TechPuzzleTime: Array(8).fill(0),
         PhysicalPuzzleStatus: [0, 0, 0, 0, 0],
