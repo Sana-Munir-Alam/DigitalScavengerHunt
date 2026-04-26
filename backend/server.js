@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -110,6 +111,78 @@ function getTrailIndex(trailType) {
   if (trailType === "Green") return 2;
   if (trailType === "Blue") return 3;
   return null;
+}
+
+const PARTICIPANT_TOKEN_SECRET =
+  process.env.PARTICIPANT_TOKEN_SECRET ||
+  process.env.AdminPassword ||
+  "change-this-secret-in-env";
+
+function signParticipantToken(teamName) {
+  const payload = {
+    role: "participant",
+    teamName: teamName.toUpperCase(),
+    exp: Date.now() + 12 * 60 * 60 * 1000,
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", PARTICIPANT_TOKEN_SECRET)
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
+
+function verifyParticipantToken(token) {
+  if (!token || typeof token !== "string" || !token.includes(".")) return null;
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) return null;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", PARTICIPANT_TOKEN_SECRET)
+    .update(encodedPayload)
+    .digest("base64url");
+
+  if (signature !== expectedSignature) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+    if (payload.role !== "participant") return null;
+    if (!payload.teamName || payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function requireParticipantAuth(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const payload = verifyParticipantToken(token);
+  if (!payload) {
+    return res.status(401).json({ message: "Unauthorized participant" });
+  }
+  req.authTeamName = payload.teamName;
+  return next();
+}
+
+function isAuthorizedTeam(req, requestedTeamName) {
+  if (!requestedTeamName) return false;
+  return requestedTeamName.toUpperCase() === req.authTeamName;
+}
+
+function hasCompletedAllPuzzles(user) {
+  const techSolved = (user.TechPuzzleStatusArray || []).filter((s) => s === 2).length;
+  const physicalSolved = (user.PhysicalPuzzleStatus || []).filter((s) => s === 2).length;
+  return techSolved === 8 && physicalSolved === 5;
+}
+
+async function ensureGamePlayable(res) {
+  const gameState = await GameState.findOne();
+  if (!gameState?.GameActive || gameState.GameEnded) {
+    res.status(400).json({ message: "Game is not active" });
+    return null;
+  }
+  return gameState;
 }
 
 async function getFlags(trailType) {
@@ -231,7 +304,7 @@ app.post("/api/admin/initialize", async (req, res) => {
     await User.updateMany({}, {
       $set: {
         TechPuzzleStatusArray: [1, 0, 0, 0, 0, 0, 0, 0],
-        TechPuzzleArray: Array(8).fill(""),
+        TechPuzzleAnswerArray: Array(8).fill(""),
         TechPuzzleTime: Array(8).fill(0),
         PhysicalPuzzleStatus: [0, 0, 0, 0, 0],
         PhysicalPuzzleArray: Array(5).fill(""),
@@ -485,11 +558,24 @@ app.get("/api/game-state", async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Get all puzzles for a trail (used by frontend)
-app.get("/api/puzzles/:trailColor", async (req, res) => {
+app.get("/api/puzzles/:trailColor", requireParticipantAuth, async (req, res) => {
   try {
+    const user = await User.findOne({ TeamName: req.authTeamName }, { TrailType: 1 });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
     const { trailColor } = req.params;
-    const techPuzzles = await Puzzle.find({ TrailColor: trailColor, TrailType: "Tech" }).sort({ PuzzleIndex: 1 });
-    const physicalPuzzles = await Puzzle.find({ TrailColor: trailColor, TrailType: "Physical" }).sort({ PuzzleIndex: 1 });
+    if (trailColor.toUpperCase() !== user.TrailType.toUpperCase()) {
+      return res.status(403).json({ message: "Forbidden trail access" });
+    }
+
+    const techPuzzles = await Puzzle.find(
+      { TrailColor: trailColor, TrailType: "Tech" },
+      { Answer: 0, Clue: 0 }
+    ).sort({ PuzzleIndex: 1 });
+    const physicalPuzzles = await Puzzle.find(
+      { TrailColor: trailColor, TrailType: "Physical" },
+      { Answer: 0, Clue: 0 }
+    ).sort({ PuzzleIndex: 1 });
     res.json({ tech: techPuzzles, physical: physicalPuzzles });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -529,6 +615,7 @@ app.post("/api/login", async (req, res) => {
       teamName: user.TeamName,
       trailType: user.TrailType,
       gameStartStatus: user.GameStartStatus,
+      token: signParticipantToken(user.TeamName),
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -540,8 +627,12 @@ app.post("/api/login", async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Get user data
-app.get("/api/user/:teamName", async (req, res) => {
+app.get("/api/user/:teamName", requireParticipantAuth, async (req, res) => {
   try {
+    if (!isAuthorizedTeam(req, req.params.teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const user = await User.findOne(
       { TeamName: req.params.teamName.toUpperCase() },
       { Password: 0 }
@@ -571,19 +662,19 @@ app.get("/api/user/:teamName", async (req, res) => {
 });
 
 // Start game for individual user
-app.post("/api/user/start-game", async (req, res) => {
+app.post("/api/user/start-game", requireParticipantAuth, async (req, res) => {
   const { teamName } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const gameState = await GameState.findOne();
-
-    // Check if game is deactivated
-    if (!gameState?.GameActive) {
-      return res.status(400).json({ message: "Game is not currently active" });
-    }
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
 
     if (!user.GameStartStatus) {
       return res.status(400).json({ message: "Game not activated by admin" });
@@ -608,10 +699,17 @@ app.post("/api/user/start-game", async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Submit Tech Puzzle Answer
-app.post("/api/puzzle/tech/submit", async (req, res) => {
+app.post("/api/puzzle/tech/submit", requireParticipantAuth, async (req, res) => {
   const { teamName, puzzleIndex, answer } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -630,7 +728,6 @@ app.post("/api/puzzle/tech/submit", async (req, res) => {
 
     const isCorrect = answer.trim().toUpperCase() === puzzle.Answer.toUpperCase();
 
-    const gameState = await GameState.findOne();
     const elapsed = gameState?.GameStartTime
       ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
       : 0;
@@ -677,10 +774,17 @@ app.post("/api/puzzle/tech/submit", async (req, res) => {
 });
 
 // Re-attempt tech puzzle after wrong answer
-app.post("/api/puzzle/tech/retry", async (req, res) => {
+app.post("/api/puzzle/tech/retry", requireParticipantAuth, async (req, res) => {
   const { teamName, puzzleIndex } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -697,10 +801,17 @@ app.post("/api/puzzle/tech/retry", async (req, res) => {
 });
 
 // Submit Physical Puzzle Answer
-app.post("/api/puzzle/physical/submit", async (req, res) => {
+app.post("/api/puzzle/physical/submit", requireParticipantAuth, async (req, res) => {
   const { teamName, puzzleIndex, answer } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -718,7 +829,6 @@ app.post("/api/puzzle/physical/submit", async (req, res) => {
 
     const isCorrect = answer.trim().toUpperCase() === puzzle.Answer.toUpperCase();
 
-    const gameState = await GameState.findOne();
     const elapsed = gameState?.GameStartTime
       ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
       : 0;
@@ -754,10 +864,17 @@ app.post("/api/puzzle/physical/submit", async (req, res) => {
 });
 
 // Re-attempt physical puzzle
-app.post("/api/puzzle/physical/retry", async (req, res) => {
+app.post("/api/puzzle/physical/retry", requireParticipantAuth, async (req, res) => {
   const { teamName, puzzleIndex } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -774,9 +891,13 @@ app.post("/api/puzzle/physical/retry", async (req, res) => {
 });
 
 // Get puzzle clue (for already-solved puzzles, re-show clue on click)
-app.get("/api/puzzle/clue", async (req, res) => {
+app.get("/api/puzzle/clue", requireParticipantAuth, async (req, res) => {
   const { teamName, puzzleIndex, type } = req.query;
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -795,12 +916,23 @@ app.get("/api/puzzle/clue", async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Verify combined flag
-app.post("/api/boss/verify-flag", async (req, res) => {
+app.post("/api/boss/verify-flag", requireParticipantAuth, async (req, res) => {
   const { teamName, flagInput } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!hasCompletedAllPuzzles(user)) {
+      return res.status(400).json({ success: false, message: "Complete all puzzles before boss access" });
+    }
 
     const flags = await getFlags(user.TrailType);
     if (!flags) return res.status(500).json({ message: "Flags not configured" });
@@ -809,7 +941,6 @@ app.post("/api/boss/verify-flag", async (req, res) => {
 
     if (flagInput.trim() === combinedFlag) {
       // Record when boss was unlocked/accessed
-      const gameState = await GameState.findOne();
       const elapsed = gameState?.GameStartTime
         ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
         : 0;
@@ -827,12 +958,36 @@ app.post("/api/boss/verify-flag", async (req, res) => {
 });
 
 // Submit boss answer
-app.post("/api/boss/submit", async (req, res) => {
+app.post("/api/boss/submit", requireParticipantAuth, async (req, res) => {
   const { teamName, answer } = req.body;
 
   try {
+    if (!isAuthorizedTeam(req, teamName)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const gameState = await ensureGamePlayable(res);
+    if (!gameState) return;
+
     const user = await User.findOne({ TeamName: teamName.toUpperCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!hasCompletedAllPuzzles(user)) {
+      return res.status(400).json({ success: false, message: "Complete all puzzles before boss submission" });
+    }
+
+    if (!user.BossStartTime) {
+      return res.status(400).json({ success: false, message: "Verify boss flag before final submission" });
+    }
+
+    if (user.SafeStatus) {
+      return res.json({
+        success: true,
+        alreadyCompleted: true,
+        finalScore: user.TotalScore,
+        submissionTime: user.FinalSubmissionTime,
+      });
+    }
 
     const bossAnswers = await Boss.findOne();
     if (!bossAnswers) return res.status(500).json({ message: "Boss answers not configured" });
@@ -842,7 +997,6 @@ app.post("/api/boss/submit", async (req, res) => {
     const isCorrect = answer.trim().toUpperCase() === correctAnswer.toUpperCase();
 
     if (isCorrect) {
-      const gameState = await GameState.findOne();
       const elapsed = gameState?.GameStartTime
         ? Math.floor((Date.now() - new Date(gameState.GameStartTime).getTime()) / 1000)
         : 0;
@@ -871,8 +1025,14 @@ app.post("/api/boss/submit", async (req, res) => {
 });
 
 // Get boss description for a trail
-app.get("/api/boss/description/:trailType", async (req, res) => {
+app.get("/api/boss/description/:trailType", requireParticipantAuth, async (req, res) => {
   try {
+    const user = await User.findOne({ TeamName: req.authTeamName }, { TrailType: 1 });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (req.params.trailType.toUpperCase() !== user.TrailType.toUpperCase()) {
+      return res.status(403).json({ message: "Forbidden trail access" });
+    }
+
     const bossAnswers = await Boss.findOne();
     if (!bossAnswers) return res.status(404).json({ message: "Boss not configured" });
 

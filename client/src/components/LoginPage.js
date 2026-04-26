@@ -25,6 +25,7 @@ export default function LoginPage() {
           password,
         });
         if (res.data.success) {
+          delete axios.defaults.headers.common.Authorization;
           sessionStorage.setItem("role", "admin");
           sessionStorage.setItem("adminUser", teamName);
           sessionStorage.setItem("adminPass", password);
@@ -33,9 +34,11 @@ export default function LoginPage() {
       } else {
         const res = await axios.post(`${API_URL}/api/login`, { teamName, password });
         if (res.data.success) {
+          axios.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
           sessionStorage.setItem("role", "participant");
           sessionStorage.setItem("teamName", res.data.teamName);
           sessionStorage.setItem("trailType", res.data.trailType);
+          sessionStorage.setItem("participantToken", res.data.token);
           navigate("/loading", { state: { role: "participant" } });
         }
       }
