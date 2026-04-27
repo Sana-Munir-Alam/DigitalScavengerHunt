@@ -287,7 +287,22 @@ export default function PuzzleRoom() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const openPuzzle = (index, type) => {
+  const fetchClue = async (index, type, puzzle, code) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/puzzle/clue`, {
+        params: { teamName, puzzleIndex: index, type },
+      });
+      setCluePopup({
+        clue: res.data.clue || puzzle?.Clue || "—",
+        puzzleName: res.data.puzzleName || puzzle?.PuzzleName || code,
+      });
+    } catch (err) {
+      console.error(err);
+      setCluePopup({ clue: puzzle?.Clue || "—", puzzleName: puzzle?.PuzzleName || code });
+    }
+  };
+
+  const openPuzzle = async (index, type) => {
     const statusArr = type === "tech"
       ? userData?.TechPuzzleStatusArray
       : userData?.PhysicalPuzzleStatus;
@@ -301,7 +316,7 @@ export default function PuzzleRoom() {
     const code = type === "tech" ? TECH_CODES[index] : PHY_CODES[index];
 
     if (status === 2) {
-      setCluePopup({ clue: puzzle?.Clue || "—", puzzleName: puzzle?.PuzzleName || code });
+      await fetchClue(index, type, puzzle, code);
       return;
     }
 
